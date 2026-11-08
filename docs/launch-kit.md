@@ -77,8 +77,9 @@
 - [x] 中英双语 README、对比表、徽章、MIT License
 - [x] 页面「分享结果」生成 PNG 卡片，方便二次传播
 - [ ] 手动上传社交预览图（Settings → Social preview，用 `og-cover.jpg`）
-- [ ] 发布 v1.0.0 Release，附在线地址与下载链接
-- [ ] 在 README 顶部放一张真实检测截图（比封面图更有说服力）
+- [x] 发布 v1.0.0 Release，附在线地址与下载链接
+- [x] README 顶部放入真实检测截图（`docs/preview.png`）
+- [x] 页面内置「一键转发」X / Telegram / 微博入口，降低二次传播成本
 
 ## 合规红线
 

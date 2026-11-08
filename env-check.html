@@ -201,6 +201,12 @@
   }
   .hero-sub{max-width:640px;margin:7px auto 0;color:var(--muted);font-size:12.5px;line-height:1.7}
   .hero-actions{display:flex;justify-content:center;gap:9px;margin-top:14px;flex-wrap:wrap}
+  .share-row{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:11.5px;color:var(--dim)}
+  .share-row .mini{
+    font-size:11.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line);
+    border-radius:7px;padding:3px 9px;background:var(--card);transition:.15s;
+  }
+  .share-row .mini:hover{color:#fff;border-color:#33405c}
   .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:12px;color:var(--muted)}
   .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
 
@@ -434,6 +440,12 @@
       <button id="btnCopy" data-i18n="btn.copy">复制报告</button>
       <button id="btnShare" data-i18n="btn.share">分享结果</button>
     </div>
+    <div class="share-row" id="shareRow">
+      <span data-i18n="share.more">一键转发</span>
+      <a id="shareX" class="mini" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener">X</a>
+      <a id="shareTg" class="mini" href="https://t.me/share/url" target="_blank" rel="noopener">Telegram</a>
+      <a id="shareWb" class="mini" href="https://service.weibo.com/share/share.php" target="_blank" rel="noopener">微博</a>
+    </div>
 
     <div class="legend">
       <span><i style="background:var(--ok)"></i><span data-i18n="legend.ok">一致</span></span>
@@ -606,6 +618,8 @@
       'share.noIssues': '未发现明显冲突',
       'share.cardTitle': 'Claude / ChatGPT 环境自检',
       'share.cardFooter': '免费 · 浏览器本地检测 · Windows / Ubuntu 一键修复',
+      'share.more': '一键转发',
+      'share.generic': '在浏览器本地检测 Claude / ChatGPT 账号环境：IP、时区、语言、字体、WebRTC/IPv6/DNS 泄漏、TUN 隧道，附 Windows / Ubuntu 一键修复脚本。',
       'score.unit': '分',
       'status.ok': '一致', 'status.warn': '存疑', 'status.bad': '冲突', 'status.info': '信息',
       'legend.ok': '一致', 'legend.warn': '存疑', 'legend.bad': '冲突', 'legend.info': '仅信息',
@@ -834,6 +848,8 @@
       'share.noIssues': 'no obvious conflicts',
       'share.cardTitle': 'Claude / ChatGPT Environment Check',
       'share.cardFooter': 'Free · runs locally in your browser · Windows / Ubuntu fix scripts',
+      'share.more': 'Share to',
+      'share.generic': 'Check your Claude / ChatGPT account environment locally: IP, timezone, language, fonts, WebRTC/IPv6/DNS leaks and TUN status, with one-file Windows / Ubuntu fix scripts.',
       'score.unit': 'pts',
       'status.ok': 'Consistent', 'status.warn': 'Suspect', 'status.bad': 'Conflict', 'status.info': 'Info',
       'legend.ok': 'Consistent', 'legend.warn': 'Suspect', 'legend.bad': 'Conflict', 'legend.info': 'Info only',
@@ -2503,6 +2519,18 @@
     });
   }
 
+  function updateShareLinks() {
+    const url = shareUrl();
+    const text = lastResult
+      ? buildShareText(computeScore(lastResult.cards), shareTier(computeScore(lastResult.cards)))
+      : t('share.generic');
+    const eu = encodeURIComponent(url);
+    const et = encodeURIComponent(text);
+    $('shareX').href = 'https://twitter.com/intent/tweet?text=' + et + '&url=' + eu;
+    $('shareTg').href = 'https://t.me/share/url?url=' + eu + '&text=' + et;
+    $('shareWb').href = 'https://service.weibo.com/share/share.php?url=' + eu + '&title=' + et;
+  }
+
   function fitText(ctx, text, maxWidth) {
     if (ctx.measureText(text).width <= maxWidth) return text;
     let s = text;
@@ -2603,6 +2631,7 @@
       await revealCards(lastResult.cards);
       isDetecting = false;
       renderSummary(score, lastResult);
+      updateShareLinks();
       renderAdvice(lastResult.cards);
       renderLeakPanel(lastResult.leaks);
       mountEmojiPreview();
@@ -2671,6 +2700,7 @@
     applyMetaI18n();
     applyStaticI18n();
     renderScriptGuide();
+    updateShareLinks();
     updateLangBtn();
     updateAgentStateText();
     updateTzStateText();
@@ -2766,6 +2796,7 @@
   updateLangBtn();
   updateAgentStateText();
   updateTzStateText();
+  updateShareLinks();
   $('sumTitle').textContent = t('summary.detecting.title');
   $('sumDesc').textContent = t('summary.detecting.desc');
 
