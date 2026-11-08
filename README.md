@@ -12,6 +12,8 @@ An in-browser self-check for the environment signals that overseas services (Cla
 
 ![preview](og-cover.jpg)
 
+![实际检测界面](docs/preview.png)
+
 > 如果这个工具帮你发现了问题，点一个 Star 就是最好的支持。If this tool helped you, a star is the best way to say thanks.
 
 [中文](#中文) · [English](#english)

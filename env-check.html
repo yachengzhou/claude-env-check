@@ -108,6 +108,12 @@
   h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
   .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
   .actions{display:flex;gap:8px;margin-left:auto}
+  .gh-link{
+    font-family:inherit;font-size:13px;color:var(--txt);background:var(--card);
+    border:1px solid var(--line);border-radius:10px;padding:8px 14px;text-decoration:none;
+    display:inline-flex;align-items:center;gap:6px;transition:.15s ease;
+  }
+  .gh-link:hover{background:#1a2030;border-color:#33405c;color:#fff}
   button{
     font-family:inherit;font-size:13px;color:var(--txt);background:var(--card);
     border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;
@@ -280,6 +286,9 @@
   .script-guide .sg-foot{font-size:11.5px;color:var(--dim)}
   .tun-state code{font-family:ui-monospace,Consolas,monospace;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:5px;padding:0 5px;color:#93c5fd}
   footer{margin-top:26px;color:var(--dim);font-size:11.5px;line-height:1.8;text-align:center}
+  .foot-links{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:6px;font-size:12px}
+  .foot-links a{color:var(--muted);text-decoration:none;transition:.15s}
+  .foot-links a:hover{color:var(--txt)}
   .emoji-preview{display:flex;align-items:center;gap:10px;margin-top:8px}
   .emoji-preview canvas{background:#0b0f16;border:1px solid #222a3a;border-radius:8px}
   .loading{opacity:.55}
@@ -337,6 +346,7 @@
       </div>
     </div>
     <div class="actions">
+      <a class="gh-link" href="https://github.com/yachengzhou/claude-env-check" target="_blank" rel="noopener" data-i18n="foot.star">GitHub</a>
       <button id="btnLang" title="Switch to English">EN</button>
     </div>
   </header>
@@ -545,6 +555,11 @@
     检测结果仅在本机浏览器内计算，不会上传任何数据；IP 归属地通过公共接口查询。<br>
     本工具用于环境自检与隐私排查，环境打分不构成任何平台行为的保证。
   </footer>
+  <div class="foot-links">
+    <a href="https://github.com/yachengzhou/claude-env-check" target="_blank" rel="noopener" data-i18n="foot.repo">源码仓库</a>
+    <a href="https://github.com/yachengzhou/claude-env-check/releases" target="_blank" rel="noopener" data-i18n="foot.release">更新日志</a>
+    <a href="https://github.com/yachengzhou/claude-env-check/stargazers" target="_blank" rel="noopener" data-i18n="foot.starCta">给个 Star</a>
+  </div>
 </div>
 
 <script>
@@ -685,6 +700,7 @@
       'tz.state.failed': '未执行：{msg}',
       'tz.value': '{display}（{id}，UTC{offset}）',
       'footer.line1': '检测结果仅在本机浏览器内计算，不会上传任何数据；IP 归属地通过公共接口查询。<br>本工具用于环境自检与隐私排查，环境打分不构成任何平台行为的保证。',
+      'foot.star': 'GitHub', 'foot.repo': '源码仓库', 'foot.release': '更新日志', 'foot.starCta': '给个 Star',
       'action.fix': '去修复', 'action.settings': '去设置', 'action.note': '说明',
       'note.IP': '出口 IP 由代理节点决定，本地无法修改；需要换成住宅宽带节点。',
       'note.LANG': '浏览器语言由浏览器自身的语言设置决定，本工具不自动修改。',
@@ -912,6 +928,7 @@
       'tz.state.failed': 'Not applied: {msg}',
       'tz.value': '{display} ({id}, UTC{offset})',
       'footer.line1': 'All results are computed locally in your browser; nothing is uploaded. IP geolocation is looked up through public APIs.<br>This tool is for environment self-checks and privacy troubleshooting; the score does not guarantee how any platform will treat your account.',
+      'foot.star': 'GitHub', 'foot.repo': 'Source', 'foot.release': 'Changelog', 'foot.starCta': 'Star on GitHub',
       'action.fix': 'Fix', 'action.settings': 'Settings', 'action.note': 'Details',
       'note.IP': 'The exit IP is determined by your proxy node and cannot be changed locally; switch to a residential broadband node instead.',
       'note.LANG': 'Browser languages are controlled by the browser’s own language settings; this tool does not modify them.',
