@@ -1,0 +1,61 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build site
+        run: |
+          set -euo pipefail
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          if [ "$REPO_NAME" = "${GITHUB_REPOSITORY_OWNER}.github.io" ]; then
+            SITE_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io"
+          else
+            SITE_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}"
+          fi
+          echo "SITE_URL=$SITE_URL" >> "$GITHUB_ENV"
+
+          mkdir -p _site
+          sed "s|__SITE_URL__|${SITE_URL}|g" env-check.html > _site/index.html
+          sed "s|__SITE_URL__|${SITE_URL}|g" robots.txt > _site/robots.txt
+          sed "s|__SITE_URL__|${SITE_URL}|g" sitemap.xml > _site/sitemap.xml
+          cp og-cover.jpg _site/og-cover.jpg
+          cp tun-agent.ps1 start-tun-check.bat start-tun-check-silent.vbs _site/
+          touch _site/.nojekyll
+          ls -la _site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

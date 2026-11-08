@@ -1,0 +1,2802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- TODO: 部署前把 __SITE_URL__ 替换为真实域名 -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude / ChatGPT 环境检测 · 防封号自检（IP / 时区 / 语言 / 指纹）</title>
+<meta name="description" content="Claude、ChatGPT 账号环境检测与防封号自检：检查节点 IP 是否机房、系统时区与浏览器语言/字体是否和出口地区一致，排查 WebRTC、DNS、IPv6 泄漏，并提供 TUN 隧道一键检查与修复。">
+<meta name="keywords" content="Claude封号,ChatGPT封号,环境检测,防封号,浏览器指纹检测,科学上网,节点IP检测,机场节点检测,时区检测,WebRTC泄漏,DNS泄漏,IPv6泄漏,TUN模式,代理检测">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#0a0c11">
+<link rel="canonical" href="__SITE_URL__/">
+<link rel="sitemap" type="application/xml" href="__SITE_URL__/sitemap.xml">
+<link rel="alternate" hreflang="zh-CN" href="__SITE_URL__/?lang=zh">
+<link rel="alternate" hreflang="en" href="__SITE_URL__/?lang=en">
+<link rel="alternate" hreflang="x-default" href="__SITE_URL__/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="EnvCheck">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="Claude / ChatGPT 环境检测 · 防封号自检">
+<meta property="og:description" content="检查节点 IP、系统时区、浏览器语言与字体是否和出口地区一致，排查 WebRTC / IPv6 / DNS 泄漏，支持 TUN 隧道一键检查与修复。">
+<meta property="og:image" content="__SITE_URL__/og-cover.jpg">
+<meta property="og:url" content="__SITE_URL__/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Claude / ChatGPT 环境检测 · 防封号自检">
+<meta name="twitter:description" content="检查节点 IP、系统时区、浏览器语言与字体是否和出口地区一致，排查 WebRTC / IPv6 / DNS 泄漏。">
+<meta name="twitter:image" content="__SITE_URL__/og-cover.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Claude / ChatGPT 环境检测 · 防封号自检",
+  "description": "检查节点 IP、系统时区、浏览器语言与字体是否和出口地区一致，排查 WebRTC / IPv6 / DNS 泄漏，并提供 TUN 隧道检查与修复。",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Any",
+  "inLanguage": ["zh-CN", "en"],
+  "url": "__SITE_URL__/",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "zh-CN",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "账号被封或提示地区不可用，是环境问题吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "平台会综合出口 IP 类型、时区与语言一致性、支付方式、手机号和使用行为判断。环境检测只能排除浏览器与系统层面的矛盾，不能保证账号结果。" }
+    },
+    {
+      "@type": "Question",
+      "name": "已经挂了美国节点，还需要改什么？",
+      "acceptedAnswer": { "@type": "Answer", "text": "让系统时区、浏览器首选语言、区域格式与节点所在地保持一致，并确认 UDP 流量没有绕过代理。" }
+    },
+    {
+      "@type": "Question",
+      "name": "机房 IP 和住宅 IP 有什么区别？",
+      "acceptedAnswer": { "@type": "Answer", "text": "机房 IP 在多数风控库里会被标记为 hosting 或 proxy，住宅 IP 更接近普通宽带用户；本工具会显示 ASN、反向解析与 hosting / proxy 标记。" }
+    },
+    {
+      "@type": "Question",
+      "name": "WebRTC、DNS、IPv6 泄漏是什么？怎么排查？",
+      "acceptedAnswer": { "@type": "Answer", "text": "系统代理模式下 UDP 可能直连，WebRTC 会暴露真实公网 IP；建议使用 TUN 模式接管全局流量，再逐项验证出口是否一致。" }
+    },
+    {
+      "@type": "Question",
+      "name": "检测数据会上传吗？",
+      "acceptedAnswer": { "@type": "Answer", "text": "不会。所有计算都在本机浏览器内完成，IP 归属地通过公共接口查询，不上传浏览器指纹或其他数据。" }
+    }
+  ]
+}
+</script>
+<style>
+  :root{
+    --bg:#0a0c11; --card:#12161f; --card2:#0e1219; --line:#242b3a;
+    --txt:#e6e9ef; --muted:#8b94a7; --dim:#5d6577;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --info:#60a5fa; --accent:#6366f1;
+  }
+  html[data-tier="low"]{--accent:var(--ok)}
+  html[data-tier="mid"]{--accent:var(--warn)}
+  html[data-tier="high"]{--accent:var(--bad)}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 520px at 15% -12%, #1b2236 0%, transparent 62%),
+      radial-gradient(900px 460px at 92% 0%, #171a2b 0%, transparent 58%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    font-size:14px; line-height:1.5; min-height:100vh;
+  }
+  .app{max-width:1180px;margin:0 auto;padding:28px 20px 64px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#6366f1,#22d3ee);color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;
+    box-shadow:0 8px 24px rgba(99,102,241,.35);
+  }
+  h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .actions{display:flex;gap:8px;margin-left:auto}
+  button{
+    font-family:inherit;font-size:13px;color:var(--txt);background:var(--card);
+    border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;
+    transition:.15s ease;display:inline-flex;align-items:center;gap:6px;
+  }
+  button:hover{background:#1a2030;border-color:#33405c}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  html[data-tier] button.primary{color:#0c1118}
+  button.primary:hover{filter:brightness(1.08)}
+
+  .hero{
+    --tier-color:var(--ok); --hero-glow:rgba(52,211,153,.15);
+    position:relative;overflow:hidden;text-align:center;margin-bottom:18px;
+    background:
+      radial-gradient(620px 280px at 50% -10%, var(--hero-glow), transparent 70%),
+      linear-gradient(180deg,#111623,#0d111a);
+    border:1px solid var(--line);border-radius:18px;padding:24px 22px 20px;
+  }
+  .hero[data-tier=""]{--tier-color:var(--info);--hero-glow:rgba(99,102,241,.15)}
+  .hero[data-tier="mid"]{--tier-color:var(--warn);--hero-glow:rgba(251,191,36,.15)}
+  .hero[data-tier="high"]{--tier-color:var(--bad);--hero-glow:rgba(248,113,113,.16)}
+  .eyebrow{font-size:10.5px;letter-spacing:.2em;color:var(--accent);font-weight:700;text-transform:uppercase}
+  .hero-title{font-size:23px;line-height:1.35;margin:8px 0 7px;font-weight:750}
+  .hero-desc{max-width:620px;margin:0 auto;color:var(--muted);font-size:12.5px;line-height:1.75}
+  .hero-stage{display:flex;align-items:center;justify-content:center;gap:46px;margin:14px 0 4px;flex-wrap:wrap}
+  .mascot{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .mascot::before{
+    content:"";position:absolute;left:50%;top:54%;width:168px;height:168px;transform:translate(-50%,-50%);
+    background:radial-gradient(circle,var(--tier-color),transparent 62%);
+    opacity:.16;filter:blur(7px);pointer-events:none;
+  }
+  .mascot-badge,.mascot-sprite,.mascot-caption{position:relative;z-index:1}
+  .mascot-badge{
+    font-family:Consolas,monospace;font-size:10px;font-weight:700;letter-spacing:.13em;
+    padding:2px 8px;border-radius:5px;color:var(--tier-color);
+    border:1px solid currentColor;background:rgba(255,255,255,.03);
+  }
+  .mascot-sprite{animation:bob 3.2s ease-in-out infinite;filter:drop-shadow(0 12px 18px rgba(0,0,0,.5))}
+  .mascot-sprite svg{display:block;width:112px;height:auto;image-rendering:pixelated}
+  .mascot-caption{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .soldier .eyes{transform-box:fill-box;transform-origin:center;animation:blink 4.6s steps(1) infinite}
+  @keyframes blink{0%,90%,100%{transform:scaleY(1)}92%,95%{transform:scaleY(.15)}}
+  .soldier .flag{transform-box:fill-box;transform-origin:left center;animation:flagWave 2.6s ease-in-out infinite}
+  @keyframes flagWave{0%,100%{transform:rotate(0)}50%{transform:rotate(-3deg) skewY(-2deg)}}
+  .soldier .star{animation:starPulse 2.4s ease-in-out infinite}
+  @keyframes starPulse{0%,100%{opacity:1}50%{opacity:.6}}
+  .soldier .shadow{transform-box:fill-box;transform-origin:center;animation:shadowPulse 3.2s ease-in-out infinite}
+  @keyframes shadowPulse{0%,100%{transform:scaleX(1);opacity:.32}50%{transform:scaleX(.86);opacity:.2}}
+  .gauge{position:relative;width:128px;height:128px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .ring{
+    --pct:0; --ring-color:var(--ok);
+    width:108px;height:108px;border-radius:50%;flex:0 0 auto;position:relative;
+    background:conic-gradient(var(--ring-color) calc(var(--pct)*1%), #222a3a 0);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ring::after{content:"";position:absolute;inset:10px;border-radius:50%;background:#0e1219}
+  .ring .num{position:relative;z-index:1;font-size:27px;font-weight:750}
+  .ring .num small{font-size:12px;color:var(--muted);font-weight:500;margin-left:1px}
+  .orbit{position:absolute;inset:0;animation:orbitSpin 11s linear infinite;pointer-events:none}
+  .orbit i{
+    position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px;border-radius:50%;
+    background:currentColor;box-shadow:0 0 7px currentColor;
+    transform:rotate(var(--a)) translateX(61px);opacity:.9;
+  }
+  .orbit i:nth-child(1){--a:10deg;color:var(--ok)}
+  .orbit i:nth-child(2){--a:130deg;color:var(--warn)}
+  .orbit i:nth-child(3){--a:220deg;color:var(--info);width:4px;height:4px;margin:-2px}
+  .orbit i:nth-child(4){--a:310deg;color:var(--bad);width:4px;height:4px;margin:-2px}
+  @keyframes orbitSpin{to{transform:rotate(360deg)}}
+  .hero-verdict{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;font-size:17px;font-weight:700;margin-top:8px;color:var(--tier-color)}
+  .risk-pill{
+    font-size:11.5px;font-weight:700;letter-spacing:.05em;padding:2px 10px;border-radius:999px;
+    border:1px solid currentColor;color:var(--tier-color);background:rgba(255,255,255,.04);
+  }
+  .hero-china{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:9px;font-size:12.5px;color:var(--txt)}
+  .hero-china .china-bar{width:120px;height:5px;border-radius:999px;background:#222a3a;overflow:hidden}
+  .hero-china .china-bar i{display:block;height:100%;width:0;background:var(--tier-color);transition:width .9s cubic-bezier(.22,.61,.36,1)}
+  .hero-china .china-pct{font-family:Consolas,monospace;font-size:12px;color:var(--muted)}
+  .verdict-icon{
+    display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+    border:1px solid currentColor;background:rgba(255,255,255,.04);font-size:12px;font-weight:800;line-height:1;
+  }
+  .hero-sub{max-width:640px;margin:7px auto 0;color:var(--muted);font-size:12.5px;line-height:1.7}
+  .hero-actions{display:flex;justify-content:center;gap:9px;margin-top:14px;flex-wrap:wrap}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:12px;color:var(--muted)}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:13px}
+  .card{
+    display:flex;gap:13px;align-items:flex-start;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;
+    transition:.18s ease;animation:cardIn .3s ease both;
+  }
+  @keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .card:hover{border-color:#33405c;transform:translateY(-1px)}
+  .card.warn{border-color:rgba(251,191,36,.34);background:linear-gradient(180deg,rgba(251,191,36,.055),var(--card))}
+  .card.bad{border-color:rgba(248,113,113,.34);background:linear-gradient(180deg,rgba(248,113,113,.06),var(--card))}
+  .badge{
+    flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    background:#1b2232;border:1px solid #2b3446;color:#9fb0cc;font-size:10.5px;font-weight:750;letter-spacing:.4px;
+  }
+  .card.warn .badge{background:#2a2314;border-color:#4a3a15;color:#fbbf24}
+  .card.bad .badge{background:#2a1717;border-color:#4a2020;color:#f87171}
+  .card.ok .badge{background:#12271f;border-color:#1d4033;color:#34d399}
+  .cbody{flex:1 1 auto;min-width:0}
+  .ctitle{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;flex-wrap:wrap}
+  .chip{font-size:10.5px;padding:1px 7px;border-radius:20px;font-weight:600;letter-spacing:.3px}
+  .chip.ok{background:rgba(52,211,153,.13);color:var(--ok)}
+  .chip.warn{background:rgba(251,191,36,.13);color:var(--warn)}
+  .chip.bad{background:rgba(248,113,113,.13);color:var(--bad)}
+  .chip.info{background:rgba(96,165,250,.13);color:var(--info)}
+  .cvalue{
+    margin-top:6px;font-family:"Cascadia Code",Consolas,ui-monospace,monospace;font-size:12.5px;
+    color:#cfd6e4;overflow-wrap:anywhere;
+  }
+  .cvalue b{color:#fff;font-weight:600}
+  .cdetail{margin-top:5px;font-size:12px;color:var(--muted);line-height:1.6}
+  .cmeta{flex:0 0 auto;text-align:right;color:var(--dim);font-size:11px;font-family:Consolas,monospace;white-space:nowrap}
+  .cmeta .w{display:block;margin-bottom:3px}
+  .cmeta .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dim)}
+  .card.ok .cmeta .dot{background:var(--ok)}
+  .card.warn .cmeta .dot{background:var(--warn)}
+  .card.bad .cmeta .dot{background:var(--bad)}
+  .fonts{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .tag{font-size:11px;padding:2px 7px;border-radius:6px;background:#1a2130;border:1px solid #2a3446;color:#a9b6cc}
+
+  .advice{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .advice h2{font-size:14.5px;margin:0 0 12px;font-weight:650;display:flex;align-items:center;gap:8px}
+  .advice h2::before{content:"";width:3px;height:15px;border-radius:2px;background:linear-gradient(#6366f1,#22d3ee)}
+  .advice ul{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+  .advice li{
+    display:flex;gap:10px;font-size:13px;color:#c2cad9;line-height:1.65;
+    background:#0f1420;border:1px solid #1e2533;border-radius:10px;padding:11px 13px;
+  }
+  .advice li .lv{flex:0 0 auto;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:5px;height:19px;line-height:17px;margin-top:1px}
+  .lv.warn{background:rgba(251,191,36,.14);color:var(--warn)}
+  .lv.bad{background:rgba(248,113,113,.14);color:var(--bad)}
+  .lv.ok{background:rgba(52,211,153,.14);color:var(--ok)}
+  .empty{color:var(--muted);font-size:13px;padding:6px 0}
+  .leak{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .leak h2{font-size:14.5px;margin:0 0 12px;font-weight:650;display:flex;align-items:center;gap:8px}
+  .leak h2::before{content:"";width:3px;height:15px;border-radius:2px;background:linear-gradient(#f87171,#fbbf24)}
+  .leak-row{display:flex;gap:13px;align-items:flex-start;background:#0f1420;border:1px solid #1e2533;border-radius:12px;padding:13px 15px;margin-bottom:10px;flex-wrap:wrap}
+  .leak-row.warn{border-color:rgba(251,191,36,.3);background:linear-gradient(180deg,rgba(251,191,36,.045),#0f1420)}
+  .leak-row.bad{border-color:rgba(248,113,113,.32);background:linear-gradient(180deg,rgba(248,113,113,.05),#0f1420)}
+  .leak-actions{flex:0 0 auto;display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  button.sm{font-size:12px;padding:5px 10px;border-radius:8px}
+  button.sm.ghost{background:transparent;color:var(--muted)}
+  button.sm:disabled{opacity:.4;cursor:not-allowed}
+  .leak-note{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+  footer{margin-top:26px;color:var(--dim);font-size:11.5px;line-height:1.8;text-align:center}
+  .emoji-preview{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .emoji-preview canvas{background:#0b0f16;border:1px solid #222a3a;border-radius:8px}
+  .loading{opacity:.55}
+  @media (max-width:560px){
+    .grid{grid-template-columns:1fr}
+    .app{padding:20px 14px 48px}
+    .leak-actions{flex:1 1 100%;margin-left:0;justify-content:flex-end}
+    .hero{padding:20px 14px 18px;border-radius:14px}
+    .hero-title{font-size:19.5px}
+    .hero-stage{gap:26px;margin:12px 0 2px}
+    .mascot-sprite svg{width:94px}
+    .gauge{width:110px;height:110px}
+    .ring{width:92px;height:92px}
+    .ring .num{font-size:24px}
+    .orbit i{transform:rotate(var(--a)) translateX(52px)}
+    .hero-verdict{font-size:15.5px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .mascot-sprite,.soldier .eyes,.soldier .flag,.soldier .star,.soldier .shadow,.orbit,.card{animation:none}
+  }
+  .tun-state{font-size:12px;color:var(--muted);margin-top:8px}
+  .tun-result{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .tun-line{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:5px 0;font-size:13px;border-bottom:1px dashed rgba(36,43,58,.6)}
+  .tun-line:last-child{border-bottom:0}
+  .tun-name{min-width:170px;color:var(--txt)}
+  .tun-detail{color:var(--muted);font-size:12.5px;flex:1;overflow-wrap:anywhere}
+  .tun-concl{margin-top:10px;font-weight:600;font-size:13px}
+  .tz-select{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12.5px;max-width:220px}
+  .card-action{margin-top:9px}
+  .card-fix{background:rgba(96,165,250,.12);color:#93c5fd;border:1px solid rgba(96,165,250,.35);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer}
+  .card-fix:hover{background:rgba(96,165,250,.22)}
+  .flash{animation:flashRing 2.2s ease}
+  @keyframes flashRing{0%,100%{box-shadow:none}20%,60%{box-shadow:0 0 0 2px rgba(96,165,250,.7)}}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);background:#1b2130;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:520px;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .seo{margin-top:18px;padding:18px 20px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .seo h2{margin:0 0 10px;font-size:16px}
+  .seo>p{color:var(--muted);font-size:13px;line-height:1.75;margin:0 0 12px}
+  .seo details{border-top:1px solid var(--line);padding:10px 0}
+  .seo summary{cursor:pointer;font-size:13.5px;color:var(--txt);list-style:none}
+  .seo summary::-webkit-details-marker{display:none}
+  .seo summary::before{content:'+';color:var(--accent);margin-right:6px}
+  .seo details[open] summary::before{content:'−'}
+  .seo details p{margin:8px 0 0;font-size:13px;line-height:1.75;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">ENV</div>
+      <div>
+        <h1 data-i18n="app.title">Claude / ChatGPT 环境检测 · 防封号自检</h1>
+        <div class="sub" data-i18n="app.sub">检查节点 IP、系统时区、浏览器语言与字体是否与出口地区一致 · 排查 WebRTC / DNS / IPv6 泄漏</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btnLang" title="Switch to English">EN</button>
+    </div>
+  </header>
+
+  <section class="hero" id="hero">
+    <div class="eyebrow" data-i18n="hero.eyebrow">浏览器环境 · 指纹扫描</div>
+    <h2 class="hero-title" data-i18n="hero.title">你的环境会被 Claude / ChatGPT 标记吗？</h2>
+    <p class="hero-desc" data-i18n="hero.desc">扫描节点 IP、系统时区、浏览器语言、字体与渲染指纹，检查它们是否与出口地区自洽。全部检测在本地完成。</p>
+
+    <div class="hero-stage">
+      <div class="mascot">
+        <div class="mascot-badge" id="mascotBadge" data-i18n="hero.badge.detecting">···</div>
+        <div class="mascot-sprite">
+          <svg class="soldier" viewBox="0 0 28 28" aria-hidden="true" shape-rendering="crispEdges">
+            <ellipse class="shadow" cx="12" cy="26.4" rx="7" ry="1.3" fill="#000"/>
+            <g class="flag">
+              <rect x="21" y="4" width="6" height="6" fill="#d8362f"/>
+              <rect x="21" y="4" width="6" height="1" fill="#ef5350"/>
+              <rect x="21" y="9" width="6" height="1" fill="#b02a25"/>
+              <rect x="22" y="6" width="2" height="2" fill="#ffd54f"/>
+            </g>
+            <rect x="20" y="3" width="1" height="21" fill="#8a6a45"/>
+            <rect x="20" y="3" width="1" height="1" fill="#c9a24a"/>
+            <rect x="6" y="3" width="10" height="2" fill="#5b6673"/>
+            <rect x="5" y="5" width="12" height="1" fill="#4c5663"/>
+            <rect x="4" y="6" width="14" height="1" fill="#3f4854"/>
+            <g class="star">
+              <rect x="10" y="2" width="2" height="1" fill="#e53935"/>
+              <rect x="9" y="3" width="4" height="1" fill="#e53935"/>
+              <rect x="10" y="4" width="2" height="1" fill="#e53935"/>
+            </g>
+            <rect x="6" y="7" width="10" height="5" fill="#f2c9a3"/>
+            <rect x="5" y="8" width="1" height="2" fill="#e8b98f"/>
+            <rect x="16" y="8" width="1" height="2" fill="#e8b98f"/>
+            <g class="eyes">
+              <rect x="8" y="8" width="1" height="1" fill="#333a44"/>
+              <rect x="13" y="8" width="1" height="1" fill="#333a44"/>
+            </g>
+            <rect x="10" y="10" width="2" height="1" fill="#c98a7a"/>
+            <rect x="6" y="12" width="10" height="7" fill="#7a8574"/>
+            <rect x="6" y="12" width="1" height="7" fill="#66705f"/>
+            <rect x="15" y="12" width="1" height="7" fill="#66705f"/>
+            <rect x="7" y="12" width="8" height="1" fill="#5c6657"/>
+            <rect x="6" y="14" width="2" height="2" fill="#d8362f"/>
+            <rect x="11" y="13" width="1" height="1" fill="#c9a24a"/>
+            <rect x="11" y="15" width="1" height="1" fill="#c9a24a"/>
+            <rect x="6" y="18" width="10" height="1" fill="#3b3630"/>
+            <rect x="10" y="18" width="2" height="1" fill="#c9a24a"/>
+            <rect x="4" y="13" width="2" height="5" fill="#6f7a69"/>
+            <rect x="4" y="17" width="1" height="2" fill="#f2c9a3"/>
+            <rect x="16" y="13" width="2" height="4" fill="#6f7a69"/>
+            <rect x="18" y="16" width="2" height="1" fill="#f2c9a3"/>
+            <rect x="7" y="19" width="4" height="5" fill="#6b7568"/>
+            <rect x="13" y="19" width="4" height="5" fill="#6b7568"/>
+            <rect x="7" y="22" width="4" height="2" fill="#5d6659"/>
+            <rect x="13" y="22" width="4" height="2" fill="#5d6659"/>
+            <rect x="6" y="24" width="5" height="2" fill="#2f333b"/>
+            <rect x="12" y="24" width="5" height="2" fill="#2f333b"/>
+          </svg>
+        </div>
+        <div class="mascot-caption" id="mascotCaption" data-i18n="hero.caption.detecting">正在扫描环境…</div>
+      </div>
+      <div class="gauge">
+        <div class="orbit"><i></i><i></i><i></i><i></i></div>
+        <div class="ring" id="ring"><div class="num"><span id="scoreNum">--</span><small id="scoreUnit" data-i18n="score.unit">分</small></div></div>
+      </div>
+    </div>
+
+    <div class="hero-verdict"><span class="risk-pill" id="riskPill" data-i18n="tier.detecting">检测中</span><span class="verdict-icon" id="verdictIcon">·</span><span id="sumTitle">正在检测环境…</span></div>
+    <div class="hero-china">
+      <span id="heroChinaText" data-i18n="china.detecting">正在判断中国用户特征…</span>
+      <span class="china-bar"><i id="chinaBar"></i></span>
+      <span class="china-pct" id="chinaPct">--%</span>
+    </div>
+    <div class="hero-sub" id="sumDesc">正在读取网络出口、系统时区、语言与图形渲染信息。</div>
+
+    <div class="hero-actions">
+      <button id="btnRefresh" class="primary" data-i18n="btn.refresh">重新检测</button>
+      <button id="btnCopy" data-i18n="btn.copy">复制报告</button>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:var(--ok)"></i><span data-i18n="legend.ok">一致</span></span>
+      <span><i style="background:var(--warn)"></i><span data-i18n="legend.warn">存疑</span></span>
+      <span><i style="background:var(--bad)"></i><span data-i18n="legend.bad">冲突</span></span>
+      <span><i style="background:var(--info)"></i><span data-i18n="legend.info">仅信息</span></span>
+    </div>
+  </section>
+
+  <section class="grid" id="cards"></section>
+
+  <section class="advice">
+    <h2 data-i18n="advice.title">配置建议</h2>
+    <ul id="adviceList"><li><span class="lv ok" data-i18n="advice.lv.tip">提示</span><span data-i18n="advice.init">等待检测完成后生成建议。</span></li></ul>
+  </section>
+
+  <section class="leak" id="privacyPanel">
+    <h2 data-i18n="leak.title">隐私泄漏修复</h2>
+    <div id="leakRows"><div class="empty" data-i18n="leak.empty">检测完成后显示。</div></div>
+    <div class="leak-note" data-i18n-html="leak.note">
+      浏览器无法直接修改系统设置：点击“修复此项”会下载一个 .ps1 脚本，右键选择“使用 PowerShell 运行”即可（脚本会自动请求管理员权限）。<br>
+      WebRTC 策略修改后需重启浏览器生效；IPv6 与 DNS 修改立即生效。页面只能检测行为结果，无法读取系统策略开关状态。<br>
+      若系统提示“禁止运行脚本”，请在 PowerShell 中执行：powershell -ExecutionPolicy Bypass -File .\privacy-fix.ps1
+    </div>
+  </section>
+
+  <section class="leak">
+    <h2 data-i18n="tun.section.title">TUN 隧道检查</h2>
+    <div id="tunRows">
+      <div class="leak-row">
+        <div class="badge">TUN</div>
+        <div class="cbody">
+          <div class="ctitle"><span data-i18n="tun.static.title">系统级检查（需运行本地脚本）</span><span class="chip info" data-i18n="status.info">仅信息</span></div>
+          <div class="cvalue" data-i18n="tun.static.value">浏览器无法读取进程、网卡和路由</div>
+          <div class="cdetail" data-i18n="tun.static.detail">检查项：v2rayN / sing-box 进程、singbox_tun 网卡、默认路由是否走隧道、v2rayN 是否管理员运行、系统代理状态、1080/1081 端口、出口 IP。</div>
+        </div>
+        <div class="leak-actions">
+          <button class="sm primary" id="btnTunFix" data-i18n="tun.btn.fix">一键修复</button>
+          <button class="sm" id="btnTunRun" data-i18n="tun.btn.run">一键检查</button>
+          <button class="sm ghost" id="btnTunCheck" data-i18n="tun.btn.script">下载检查脚本</button>
+          <button class="sm ghost" id="btnTunFallback" data-i18n="tun.btn.fallback">故障兜底</button>
+        </div>
+      </div>
+    </div>
+    <div id="tunAgentState" class="tun-state" data-i18n="tun.state.detecting">检查服务：检测中…</div>
+    <div id="tunResult" class="tun-result" hidden></div>
+    <div class="leak-note" data-i18n-html="tun.note">
+      「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，运行同目录的 start-tun-check.bat 即可。<br>
+      「一键修复」会弹出 UAC 授权：自动关闭系统代理、在 v2rayN 配置中开启 TUN，并以管理员身份重启 v2rayN，修复后再自动复检；若 TUN 始终无法就绪，会切回系统代理保证联网。<br>
+      「下载检查脚本」可单独在 PowerShell 中运行；「故障兜底」仅在 TUN 异常时才切回系统代理，正常时不做任何修改。<br>
+      启动服务后也可直接访问 http://127.0.0.1:8788/ 使用页面。
+    </div>
+  </section>
+
+  <section class="leak" id="tzPanel">
+    <h2 data-i18n="tz.section.title">系统时区（通用设置）</h2>
+    <div class="leak-row">
+      <div class="badge">TZ</div>
+      <div class="cbody">
+        <div class="ctitle"><span data-i18n="tz.card.title">当前系统时区</span><span class="chip info" data-i18n="tz.chip">系统级</span></div>
+        <div class="cvalue" id="tzCurrent" data-i18n="tz.reading">读取中…</div>
+        <div class="cdetail" data-i18n="tz.card.detail">修改需要管理员确认（UAC）。首次修改会保存原时区，之后可点「还原」恢复。</div>
+      </div>
+      <div class="leak-actions">
+        <select id="tzSelect" class="tz-select">
+          <option value="China Standard Time">Asia/Shanghai (UTC+8)</option>
+          <option value="Tokyo Standard Time">Asia/Tokyo (UTC+9)</option>
+          <option value="Singapore Standard Time">Asia/Singapore (UTC+8)</option>
+          <option value="GMT Standard Time">Europe/London (UTC+0)</option>
+          <option value="W. Europe Standard Time">Europe/Berlin (UTC+1)</option>
+          <option value="Eastern Standard Time">America/New_York (UTC-5)</option>
+          <option value="Central Standard Time">America/Chicago (UTC-6)</option>
+          <option value="Mountain Standard Time">America/Denver (UTC-7)</option>
+          <option value="Pacific Standard Time">America/Los_Angeles (UTC-8)</option>
+          <option value="UTC">UTC</option>
+        </select>
+        <button class="sm primary" id="btnTzApply" data-i18n="tz.btn.apply">应用</button>
+        <button class="sm ghost" id="btnTzRestore" data-i18n="tz.btn.restore">还原</button>
+      </div>
+    </div>
+    <div id="tzMsg" class="tun-state" data-i18n="tz.state.detecting">时区服务：检测中…</div>
+  </section>
+
+  <section class="seo" id="faq">
+    <h2 data-i18n="seo.h2">Claude / ChatGPT 防封号环境检测常见问题</h2>
+    <p data-i18n="seo.intro">本工具面向使用 Claude、ChatGPT 与科学上网的用户，一键检查节点 IP、系统时区、浏览器语言、字体与渲染指纹是否与出口地区自洽，并排查 WebRTC、DNS、IPv6 泄漏，降低因环境矛盾被风控标记的概率。所有检测在浏览器本地完成。</p>
+    <details>
+      <summary data-i18n="seo.q1">账号被封或提示地区不可用，是环境问题吗？</summary>
+      <p data-i18n="seo.a1">平台会综合出口 IP 类型、时区与语言一致性、支付方式、手机号和使用行为判断。环境检测只能排除浏览器与系统层面的矛盾，不能保证账号结果；提示“region”多为 IP 地区问题，提示“disabled after review”才是账号层面的处置。</p>
+    </details>
+    <details>
+      <summary data-i18n="seo.q2">已经挂了美国节点，还需要改什么？</summary>
+      <p data-i18n="seo.a2">建议让系统时区、浏览器首选语言、区域格式与节点所在地保持一致，并确认 UDP 流量没有绕过代理。仅改浏览器语言而系统时区仍是 Asia/Shanghai，是最常见的矛盾组合。</p>
+    </details>
+    <details>
+      <summary data-i18n="seo.q3">机房 IP 和住宅 IP 有什么区别？</summary>
+      <p data-i18n="seo.a3">机房 IP 在多数风控库里会被标记为 hosting / proxy，住宅 IP 更接近普通宽带用户。本工具会显示出口 ASN、反向解析与 hosting / proxy 标记，方便你判断当前节点质量。</p>
+    </details>
+    <details>
+      <summary data-i18n="seo.q4">WebRTC、DNS、IPv6 泄漏是什么？怎么排查？</summary>
+      <p data-i18n="seo.a4">系统代理模式下 TCP 走代理但 UDP 可能直连，WebRTC 会暴露真实公网 IP；DNS 与 IPv6 也可能从本地网络出口发出。建议使用 TUN 模式接管全局流量，再用本工具逐项验证出口是否一致。</p>
+    </details>
+    <details>
+      <summary data-i18n="seo.q5">检测数据会上传吗？</summary>
+      <p data-i18n="seo.a5">不会。所有计算都在本机浏览器内完成，IP 归属地通过公共接口查询，不收集、不上传浏览器指纹或其他数据。</p>
+    </details>
+  </section>
+
+  <footer data-i18n-html="footer.line1">
+    检测结果仅在本机浏览器内计算，不会上传任何数据；IP 归属地通过公共接口查询。<br>
+    本工具用于环境自检与隐私排查，环境打分不构成任何平台行为的保证。
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- 基础工具 ---------- */
+  const $ = (id) => document.getElementById(id);
+  const pad = (n) => String(n).padStart(2, '0');
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+  /* ---------- 国际化 ---------- */
+  const LANG_STORE_KEY = 'env-check-lang';
+  const I18N = {
+    zh: {
+      'doc.title': 'Claude / ChatGPT 环境检测 · 防封号自检（IP / 时区 / 语言 / 指纹）',
+      'doc.description': 'Claude、ChatGPT 账号环境检测与防封号自检：检查节点 IP 是否机房、系统时区与浏览器语言/字体是否和出口地区一致，排查 WebRTC、DNS、IPv6 泄漏，并提供 TUN 隧道一键检查与修复。',
+      'doc.keywords': 'Claude封号, ChatGPT封号, 环境检测, 防封号, 浏览器指纹检测, 科学上网, 节点IP检测, 机场节点检测, 时区检测, WebRTC泄漏, DNS泄漏, IPv6泄漏, TUN模式, 代理检测',
+      'og.title': 'Claude / ChatGPT 环境检测 · 防封号自检',
+      'og.description': '检查节点 IP、系统时区、浏览器语言与字体是否和出口地区一致，排查 WebRTC / IPv6 / DNS 泄漏，支持 TUN 隧道一键检查与修复。',
+      'og.locale': 'zh_CN',
+      'seo.h2': 'Claude / ChatGPT 防封号环境检测常见问题',
+      'seo.intro': '本工具面向使用 Claude、ChatGPT 与科学上网的用户，一键检查节点 IP、系统时区、浏览器语言、字体与渲染指纹是否与出口地区自洽，并排查 WebRTC、DNS、IPv6 泄漏，降低因环境矛盾被风控标记的概率。所有检测在浏览器本地完成。',
+      'seo.q1': '账号被封或提示地区不可用，是环境问题吗？',
+      'seo.a1': '平台会综合出口 IP 类型、时区与语言一致性、支付方式、手机号和使用行为判断。环境检测只能排除浏览器与系统层面的矛盾，不能保证账号结果；提示 region 多为 IP 地区问题，提示 disabled after review 才是账号层面的处置。',
+      'seo.q2': '已经挂了美国节点，还需要改什么？',
+      'seo.a2': '建议让系统时区、浏览器首选语言、区域格式与节点所在地保持一致，并确认 UDP 流量没有绕过代理。仅改浏览器语言而系统时区仍是 Asia/Shanghai，是最常见的矛盾组合。',
+      'seo.q3': '机房 IP 和住宅 IP 有什么区别？',
+      'seo.a3': '机房 IP 在多数风控库里会被标记为 hosting 或 proxy，住宅 IP 更接近普通宽带用户。本工具会显示出口 ASN、反向解析与 hosting / proxy 标记，方便你判断当前节点质量。',
+      'seo.q4': 'WebRTC、DNS、IPv6 泄漏是什么？怎么排查？',
+      'seo.a4': '系统代理模式下 TCP 走代理但 UDP 可能直连，WebRTC 会暴露真实公网 IP；DNS 与 IPv6 也可能从本地网络出口发出。建议使用 TUN 模式接管全局流量，再用本工具逐项验证出口是否一致。',
+      'seo.q5': '检测数据会上传吗？',
+      'seo.a5': '不会。所有计算都在本机浏览器内完成，IP 归属地通过公共接口查询，不收集、不上传浏览器指纹或其他数据。',
+      'app.title': 'Claude / ChatGPT 环境检测 · 防封号自检',
+      'app.sub': '检查节点 IP、系统时区、浏览器语言与字体是否与出口地区一致 · 排查 WebRTC / DNS / IPv6 泄漏',
+      'btn.copy': '复制报告', 'btn.copyDone': '已复制',
+      'btn.refresh': '重新检测', 'btn.refreshing': '检测中…',
+      'score.unit': '分',
+      'status.ok': '一致', 'status.warn': '存疑', 'status.bad': '冲突', 'status.info': '信息',
+      'legend.ok': '一致', 'legend.warn': '存疑', 'legend.bad': '冲突', 'legend.info': '仅信息',
+      'tier.low.title': '风险较低',
+      'tier.low.desc': '网络出口、时区、语言与系统环境基本一致，未发现明显的矛盾信号。',
+      'tier.mid.title': '存在若干不一致项',
+      'tier.mid.desc': '部分环境信号与网络出口地区对不上，建议按下方建议逐项处理。',
+      'tier.high.title': '环境冲突明显',
+      'tier.high.desc': '多项关键信号互相矛盾（如时区、语言、字体与 IP 地区不符），这是最容易被风控识别的组合。',
+      'hero.eyebrow': '浏览器环境 · 指纹扫描',
+      'hero.title': '你的环境会被 Claude / ChatGPT 标记吗？',
+      'hero.desc': '扫描节点 IP、系统时区、浏览器语言、字体与渲染指纹，检查它们是否与出口地区自洽。全部检测在本地完成。',
+      'hero.badge.detecting': '···',
+      'hero.badge.low': '✓ OK',
+      'hero.badge.mid': '! CHECK',
+      'hero.badge.high': '× RISK',
+      'hero.caption.detecting': '正在扫描环境…',
+      'hero.caption.low': '环境自洽，看不出明显矛盾',
+      'hero.caption.mid': '有几项需要调整',
+      'hero.caption.high': '环境存在明显矛盾',
+      'tier.detecting': '检测中',
+      'tier.low.label': '低风险',
+      'tier.mid.label': '中风险',
+      'tier.high.label': '高风险',
+      'china.detecting': '正在判断中国用户特征…',
+      'china.low': '你看起来不像中国用户',
+      'china.mid': '存在部分中国用户特征',
+      'china.high': '你看起来像中国用户',
+      'summary.syncing': '正在同步环境信号 {done}/{total}…',
+      'summary.detecting.title': '正在检测环境…',
+      'summary.detecting.desc': '正在读取网络出口、系统时区、语言与图形渲染信息。',
+      'summary.failed.title': '检测失败',
+      'summary.failed.desc': '运行过程中出现异常：{msg}',
+      'advice.title': '配置建议',
+      'advice.init': '等待检测完成后生成建议。',
+      'advice.ok': '未发现需要处理的环境冲突。保持系统环境稳定，不要频繁切换网络出口地区或修改时区/语言设置。',
+      'advice.principle': '环境监听的核心是“一致性”而非单项是否合规：IP、时区、语言、字体、系统应构成一个自洽整体。只改其中一项往往制造出更明显的矛盾特征。',
+      'advice.lv.ok': '良好', 'advice.lv.warn': '建议', 'advice.lv.bad': '冲突', 'advice.lv.tip': '提示',
+      'leak.title': '隐私泄漏修复',
+      'leak.empty': '检测完成后显示。',
+      'leak.note': '浏览器无法直接修改系统设置：点击“修复此项”会下载一个 .ps1 脚本，右键选择“使用 PowerShell 运行”即可（脚本会自动请求管理员权限）。<br>WebRTC 策略修改后需重启浏览器生效；IPv6 与 DNS 修改立即生效。页面只能检测行为结果，无法读取系统策略开关状态。<br>若系统提示“禁止运行脚本”，请在 PowerShell 中执行：powershell -ExecutionPolicy Bypass -File .\\privacy-fix.ps1',
+      'leak.btn.fix': '修复此项', 'leak.btn.harden': '加固', 'leak.btn.restore': '还原',
+      'leak.downloaded': '已下载', 'leak.downloadedRestore': '已下载还原',
+      'tun.section.title': 'TUN 隧道检查',
+      'tun.static.title': '系统级检查（需运行本地脚本）',
+      'tun.static.value': '浏览器无法读取进程、网卡和路由',
+      'tun.static.detail': '检查项：v2rayN / sing-box 进程、singbox_tun 网卡、默认路由是否走隧道、v2rayN 是否管理员运行、系统代理状态、1080/1081 端口、出口 IP。',
+      'tun.btn.fix': '一键修复', 'tun.btn.run': '一键检查', 'tun.btn.script': '下载检查脚本',
+      'tun.btn.fallback': '故障兜底', 'tun.btn.downloaded': '已下载',
+      'tun.state.detecting': '检查服务：检测中…',
+      'tun.note': '「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，运行同目录的 start-tun-check.bat 即可。<br>「一键修复」会弹出 UAC 授权：自动关闭系统代理、在 v2rayN 配置中开启 TUN，并以管理员身份重启 v2rayN，修复后再自动复检；若 TUN 始终无法就绪，会切回系统代理保证联网。<br>「下载检查脚本」可单独在 PowerShell 中运行；「故障兜底」仅在 TUN 异常时才切回系统代理，正常时不做任何修改。<br>启动服务后也可直接访问 http://127.0.0.1:8788/ 使用页面。',
+      'tun.agent.connected': '检查服务：<span style="color:var(--ok)">已连接</span>',
+      'tun.agent.stopped': '检查服务：<span style="color:var(--bad)">未启动</span> · 请双击同目录的 start-tun-check.bat',
+      'tun.updatedAt': '更新于 {time}', 'tun.updatedAfterFix': '修复后更新于 {time}',
+      'tun.running': '正在执行本地检查（最长约 30 秒）…',
+      'tun.notConnected': '检查服务未启动。可运行同目录的 start-tun-check.bat；服务已设为开机自启，页面每 5 秒自动重连。',
+      'tun.conclusion.ok': '结论：全部检查项通过。',
+      'tun.conclusion.fail': '结论：发现 {n} 项异常。',
+      'tun.fixing': '修复中', 'tun.fixFailed': '修复失败',
+      'tun.askAdmin': '正在请求管理员权限，请在 UAC 弹窗中点「是」…',
+      'tun.cannotStart': '无法启动修复：{msg}（请确认 start-tun-check.bat 已启动）',
+      'tun.rechecking': '修复流程结束，正在重新检查（约 20 秒）…',
+      'tun.waitTimeout': '等待超时，正在重新检查当前状态…',
+      'tun.cannotRead': '修复后无法获取检查结果，请确认检查服务仍在运行。',
+      'tz.section.title': '系统时区（通用设置）',
+      'tz.card.title': '当前系统时区', 'tz.chip': '系统级', 'tz.reading': '读取中…',
+      'tz.card.detail': '修改需要管理员确认（UAC）。首次修改会保存原时区，之后可点「还原」恢复。',
+      'tz.btn.apply': '应用', 'tz.btn.restore': '还原',
+      'tz.state.detecting': '时区服务：检测中…',
+      'tz.state.connected': '时区服务：<span style="color:var(--ok)">已连接</span> · 修改需在 UAC 窗口确认',
+      'tz.state.needService': '需要本地检查服务',
+      'tz.state.stopped': '时区服务：<span style="color:var(--bad)">未启动</span> · 先双击 start-tun-check.bat',
+      'tz.state.modifyIssued': '已发起修改，请在 UAC 窗口点「是」，稍后自动刷新…',
+      'tz.state.failed': '未执行：{msg}',
+      'tz.value': '{display}（{id}，UTC{offset}）',
+      'footer.line1': '检测结果仅在本机浏览器内计算，不会上传任何数据；IP 归属地通过公共接口查询。<br>本工具用于环境自检与隐私排查，环境打分不构成任何平台行为的保证。',
+      'action.fix': '去修复', 'action.settings': '去设置', 'action.note': '说明',
+      'note.IP': '出口 IP 由代理节点决定，本地无法修改；需要换成住宅宽带节点。',
+      'note.LANG': '浏览器语言由浏览器自身的语言设置决定，本工具不自动修改。',
+      'note.INTL': 'Intl 区域跟随浏览器界面语言，不是 Windows 区域设置。',
+      'note.FONT': '微软雅黑、宋体等是 Windows 基础镜像自带的 CJK 回退字体，任何语言版本都有，不计入风险；只有随中文语言功能/中文软件安装的附加字体才会提示。',
+      'note.EMOJI': 'Emoji 风格由系统 emoji 字体决定（Windows 为 Segoe UI Emoji），全球一致，不能用来判断地区；仅在缺少彩色 emoji 时提示异常。',
+      'emoji.previewNote': '上方为当前系统实际渲染效果，可用于目测系统类型。',
+      'card.ip.title': '网络出口',
+      'card.ip.value': '<b>{ip}</b> · {place}',
+      'card.ip.detail': '时区 {tz} · 运营方 {org}',
+      'card.ip.unknown': '未知',
+      'card.ip.fail.value': '查询失败',
+      'card.ip.fail.detail': '公共 IP 接口不可达，可能是网络拦截或临时限流，可点击“重新检测”重试。',
+      'card.ip.advice': '出口 IP 属于数据中心/云厂商网段，而非住宅宽带。这类 IP 在风控系统中通常被单独标记，建议使用稳定的家庭网络出口，避免频繁更换机房节点。',
+      'card.tz.title': '系统时区',
+      'card.tz.detail.init': '系统上报的时区与偏移。',
+      'card.tz.detail.match': '与网络出口所在时区一致（偏移差 0 分钟）。',
+      'card.tz.detail.near': '与网络出口时区存在 {diff} 分钟偏移，可能由夏令时或时区设置差异导致。',
+      'card.tz.detail.far': '与网络出口时区相差 {hours} 小时，这是最典型的环境矛盾信号。',
+      'card.tz.detail.cn': '命中中国时区名：{name}，这是中文环境的强特征。',
+      'card.tz.advice.near': '系统时区与网络出口时区存在偏移，建议保持两者同步，避免出现“IP 在美国、时间却是 UTC+8”这类矛盾。',
+      'card.tz.advice.far': '系统时区与网络出口时区严重不一致。若使用代理/VPN，请让系统时区跟随出口地区，否则该矛盾会被服务端直接识别。',
+      'card.tz.advice.cn': '系统时区命中中国标准时区。若网络出口不在中国，建议把系统时区改为与出口地区一致，避免出现明显的时区矛盾。',
+      'card.lang.title': '浏览器语言',
+      'card.lang.detail.init': '浏览器声明的语言优先级列表。',
+      'card.lang.detail.match': '与网络出口地区（{country}）的常用语言一致。',
+      'card.lang.detail.mismatch': '网络出口为 {country}，常用语言应为 {expected}，而浏览器首选语言是 {primary}。',
+      'card.lang.advice': '浏览器首选语言与出口地区不匹配（例如 IP 在美国但首选 zh-CN）。建议在浏览器语言设置中把目标地区语言调到首位，并保持与系统语言一致。',
+      'card.font.title': '字体指纹',
+      'card.font.value': '附加中文字体 {add} 款 · 国产厂商 {vendor} 款 · 西文 {latin} 款',
+      'card.font.detail.summary': '共检测到 {add} 款附加中文字体、{vendor} 款国产厂商字体、{latin} 款西文字体；系统自带 CJK 回退字体 {base} 款。',
+      'card.font.detail.zhRegion': ' 出口地区 {country} 属于中文地区，字体分布与区域相符。',
+      'card.font.detail.nonZhHit': ' 出口地区为 {country}，但系统装有中文/国产字体：{names}。',
+      'card.font.detail.nonZhNone': ' 出口地区为 {country}，未检测到附加中文或国产字体。',
+      'card.font.advice': '这些字体通常随中文语言功能、国产系统或中文软件安装，纯英文系统一般不存在，属于地区一致性很强的信号；微软雅黑、宋体等系统自带回退字体已不计入本项。',
+      'card.intl.title': 'Intl 区域设置',
+      'card.intl.detail.init': 'JS Intl 接口上报的默认区域。',
+      'card.intl.detail.match': '区域与网络出口一致（{region}）。',
+      'card.intl.detail.mismatch': 'Intl 区域为 {region}，与网络出口 {country} 不一致。',
+      'card.off.title': '时区偏移',
+      'card.off.detail': '与系统时区相互印证；单看正常，但需与出口时区匹配。',
+      'card.emoji.title': 'Emoji 渲染风格',
+      'card.emoji.value': '指纹 {hash} · 彩色像素 {colored}',
+      'card.emoji.detail.init': '不同系统渲染出的 emoji 位图不同，可作为系统类型佐证。',
+      'card.emoji.detail.missing': 'Windows 应使用 Segoe UI Emoji 渲染彩色 emoji，但未检测到彩色像素，可能缺少 emoji 字体或处于无头/截图环境。',
+      'card.emoji.detail.winOk': 'Windows 统一使用 Segoe UI Emoji 渲染，全球一致，不反映地区差异，仅作为系统类型佐证。',
+      'card.gl.title': 'WebGL 渲染器',
+      'card.gl.detail': '厂商 {vendor} · 推断系统 {os} · UA 平台 {platform}',
+      'card.gl.osUnknown': '未知', 'card.gl.unavailable': 'WebGL 不可用', 'card.gl.readFail': '读取失败',
+      'card.canvas.title': 'Canvas 指纹',
+      'card.canvas.detail': '由字体、抗锯齿、显卡驱动共同决定，同一设备通常保持稳定。',
+      'card.audio.title': '音频指纹',
+      'card.audio.detail': '音频栈的细微差异同样可用于设备识别，属于较难修改的信号。',
+      'card.hw.title': '硬件与屏幕',
+      'card.hw.value': 'CPU {cores} 核 · 内存 {mem} · {screen}',
+      'card.hw.detail': '语言 {lang} · 触摸点 {touch} · 平台 {platform}',
+      'card.hw.unknown': '未知', 'card.hw.notExposed': '未暴露',
+      'card.rtc.title': 'WebRTC 本地 IP',
+      'card.rtc.value.none': '未检测到候选 IP',
+      'card.rtc.detail.none': '未返回候选地址，或已被浏览器 mDNS 隐藏（正常）。',
+      'card.rtc.detail.private': '仅暴露内网地址（或被 mDNS 隐藏），未泄露公网 IP。',
+      'card.rtc.detail.match': 'WebRTC 公网候选与 HTTP 出口一致，流量经代理出口，未泄露真实 IP。',
+      'card.rtc.detail.mismatch': 'WebRTC 暴露的公网 IP 与 HTTP 出口 IP 不一致，存在真实 IP 泄露风险。',
+      'card.rtc.detail.publicOnly': '暴露公网候选地址，但当前无法获取 HTTP 出口，无法判断是否一致。',
+      'card.v6.title': 'IPv6 绕过',
+      'card.v6.value.none': '未检测到 IPv6 出口',
+      'card.v6.detail.none': '本机当前无法通过 IPv6 访问外网，IPv6 流量不会绕过代理。',
+      'card.v6.detail.match': 'IPv6 出口与 HTTP 出口一致，未发现绕过。',
+      'card.v6.detail.mismatch': '本机可直连 IPv6，且与代理出口（{exit}）不一致，IPv6 流量可能绕过代理暴露真实地址。',
+      'card.v6.advice': '检测到 IPv6 可直连且与代理出口不同。建议在网卡上关闭 IPv6 绑定，或在代理客户端开启“阻断 IPv6 / IPv6 走代理”。',
+      'card.dns.title': 'DNS 出口',
+      'card.dns.value.fail': '查询失败',
+      'card.dns.detail.fail': 'DNS 出口检测接口不可达，可稍后重试。',
+      'card.dns.detail.sameIp': 'DNS 出口与 HTTP 出口为同一地址，DNS 查询同样经过代理，未泄露。',
+      'card.dns.detail.sameCountry': 'DNS 出口与 HTTP 出口同属 {country}，但地址不同。使用公共 DNS（如 8.8.8.8 / 1.1.1.1）时，递归出口是公共 DNS 自己的地址，与代理节点不同属正常现象，未发现跨地区泄漏。',
+      'card.dns.detail.leak': 'DNS 出口位于 {geo}，与 HTTP 出口地区不一致，存在 DNS 泄漏。',
+      'card.dns.advice': 'DNS 查询没有走代理，出口地区与流量不一致。建议开启代理的 TUN/全局模式与 DNS 覆写，或在本机设置加密 DNS（DoH）。',
+      'card.tun.title': '隧道检查',
+      'card.tun.value': '通过 {ok}/{total}',
+      'card.tun.unavailable': '本地检查服务未启动，无法判断。',
+      'card.tun.pass': '全部检查项通过。',
+      'card.tun.failDetail': '失败项：{names}',
+      'card.tun.noData': '—',
+      'leak.rtc.title': 'WebRTC 真实 IP 泄漏',
+      'leak.rtc.value.none': '未返回候选地址或仅内网地址',
+      'leak.rtc.value.match': '{ips}（与出口 {exit} 一致）',
+      'leak.rtc.value.mismatch': '对外暴露 {ips}（与出口 {exit} 不一致）',
+      'leak.rtc.value.public': '暴露公网候选地址 {ips}',
+      'leak.rtc.detail': 'WebRTC 可绕过代理直接暴露本机公网地址。修复方式：写入浏览器策略 disable_non_proxied_udp，并在防火墙层阻断 Chrome/Edge 出站 UDP（策略未加载时由防火墙兜底）。',
+      'leak.v6.title': 'IPv6 绕过代理',
+      'leak.v6.detail': 'IPv6 若可直连而代理只处理 IPv4，流量会绕过代理。修复方式为关闭网卡 ms_tcpip6 绑定。',
+      'leak.dns.title': 'DNS 出口一致性',
+      'leak.dns.detail': '对比 DNS 递归出口与 HTTP 出口是否同一地址/地区。修复方式为开启代理 DNS 覆写或设置加密 DNS。',
+      'report.title': '环境一致性自检报告',
+      'report.time': '生成时间：{time}',
+      'report.score': '风险分：{score} / 100',
+      'report.leakHeader': '-- 隐私泄漏 --',
+      'report.ip': 'IP：{value}', 'report.tz': '时区：{value}', 'report.lang': '语言：{value}',
+      'report.fonts': '字体：{value}', 'report.webgl': 'WebGL：{value}',
+      'report.canvas': 'Canvas：{canvas}  Audio：{audio}', 'report.na': '不可用',
+      'toast.allPass': '全部检查项已通过',
+      'toast.stillFail': '仍有 {n} 项未通过，请查看明细'
+    },
+    en: {
+      'doc.title': 'Claude / ChatGPT Environment Check · Anti-Ban Self-Audit (IP / Timezone / Language)',
+      'doc.description': 'Environment check for Claude and ChatGPT users: detect datacenter exit IPs, mismatched system timezone, browser language and fonts, and WebRTC, DNS or IPv6 leaks, with local fix scripts.',
+      'doc.keywords': 'Claude ban, ChatGPT ban, environment check, anti-ban, browser fingerprint check, VPN leak test, proxy IP check, timezone check, WebRTC leak, DNS leak, IPv6 leak, TUN mode',
+      'og.title': 'Claude / ChatGPT Environment Check · Anti-Ban Self-Audit',
+      'og.description': 'Check whether your exit IP, timezone, browser language and fonts match your region, and detect WebRTC / IPv6 / DNS leaks with local fix scripts.',
+      'og.locale': 'en_US',
+      'seo.h2': 'Claude / ChatGPT anti-ban environment check FAQ',
+      'seo.intro': 'Built for Claude, ChatGPT and VPN users: run one scan to check whether your exit IP, system timezone, browser language, fonts and rendering fingerprints match your region, and to detect WebRTC, DNS and IPv6 leaks. Everything runs locally in your browser.',
+      'seo.q1': 'Is my ban or region error caused by my environment?',
+      'seo.a1': 'Platforms combine exit IP type, timezone and language consistency, payment method, phone number and behaviour. An environment scan can only rule out browser and OS contradictions; it cannot guarantee account outcomes. A region message usually means an IP location issue, while disabled after review is an account-level action.',
+      'seo.q2': 'I already use a US node. What else should I change?',
+      'seo.a2': 'Make the system timezone, browser preferred language and regional format match the node location, and confirm UDP traffic is not bypassing the proxy. Changing only the browser language while the system timezone stays Asia/Shanghai is the most common mismatch.',
+      'seo.q3': 'What is the difference between datacenter and residential IPs?',
+      'seo.a3': 'Datacenter IPs are flagged as hosting or proxy in most risk databases, while residential IPs look like ordinary broadband users. This tool shows the exit ASN, reverse DNS and hosting / proxy flags so you can judge node quality.',
+      'seo.q4': 'What are WebRTC, DNS and IPv6 leaks?',
+      'seo.a4': 'With a system proxy, TCP goes through the proxy but UDP may still go direct, so WebRTC can expose your real public IP; DNS and IPv6 may also leave through your local network. Use TUN mode to capture all traffic, then verify each exit with this tool.',
+      'seo.q5': 'Is my data uploaded?',
+      'seo.a5': 'No. All computation happens in your browser. IP geolocation is queried from public APIs, and no fingerprint or other data is collected or uploaded.',
+      'app.title': 'Claude / ChatGPT Environment Check · Anti-Ban Self-Audit',
+      'app.sub': 'Verify that your exit IP, system timezone, browser language and fonts match your region · detect WebRTC / DNS / IPv6 leaks',
+      'btn.copy': 'Copy report', 'btn.copyDone': 'Copied',
+      'btn.refresh': 'Rescan', 'btn.refreshing': 'Scanning…',
+      'score.unit': 'pts',
+      'status.ok': 'Consistent', 'status.warn': 'Suspect', 'status.bad': 'Conflict', 'status.info': 'Info',
+      'legend.ok': 'Consistent', 'legend.warn': 'Suspect', 'legend.bad': 'Conflict', 'legend.info': 'Info only',
+      'tier.low.title': 'No obvious red flags',
+      'tier.low.desc': 'Your network exit, timezone, language and system environment are broadly consistent. No obvious contradictions found.',
+      'tier.mid.title': 'Some inconsistencies',
+      'tier.mid.desc': 'Several signals do not match the exit region. Review the suggestions below and fix them one by one.',
+      'tier.high.title': 'Significant conflicts',
+      'tier.high.desc': 'Multiple key signals contradict each other (timezone, language, fonts vs. IP region). This is the combination most likely to be flagged.',
+      'hero.eyebrow': 'Browser environment · fingerprint scan',
+      'hero.title': 'Will your environment be flagged by Claude / ChatGPT?',
+      'hero.desc': 'Scans your exit IP, system timezone, browser language, fonts and rendering fingerprints, and checks whether they agree with your exit region. Everything runs locally.',
+      'hero.badge.detecting': '···',
+      'hero.badge.low': '✓ OK',
+      'hero.badge.mid': '! CHECK',
+      'hero.badge.high': '× RISK',
+      'hero.caption.detecting': 'Scanning your environment…',
+      'hero.caption.low': 'Your setup looks consistent',
+      'hero.caption.mid': 'A few things need fixing',
+      'hero.caption.high': 'Your environment conflicts',
+      'tier.detecting': 'Scanning',
+      'tier.low.label': 'Low risk',
+      'tier.mid.label': 'Medium risk',
+      'tier.high.label': 'High risk',
+      'china.detecting': 'Estimating China-user signals…',
+      'china.low': 'You do not look like a China-based user',
+      'china.mid': 'Some China-user signals detected',
+      'china.high': 'You look like a China-based user',
+      'summary.syncing': 'Syncing environment signals {done}/{total}…',
+      'summary.detecting.title': 'Scanning your environment…',
+      'summary.detecting.desc': 'Reading network exit, system timezone, language and rendering details.',
+      'summary.failed.title': 'Scan failed',
+      'summary.failed.desc': 'Something went wrong: {msg}',
+      'advice.title': 'Recommendations',
+      'advice.init': 'Recommendations will appear after the scan.',
+      'advice.ok': 'No environment conflicts need attention. Keep your setup stable and avoid frequently switching exit regions, timezones or languages.',
+      'advice.principle': 'Consistency matters more than any single check: IP, timezone, language, fonts and system should tell one coherent story. Changing only one item often creates a more obvious fingerprint.',
+      'advice.lv.ok': 'Good', 'advice.lv.warn': 'Suggest', 'advice.lv.bad': 'Conflict', 'advice.lv.tip': 'Tip',
+      'leak.title': 'Privacy Leak Remediation',
+      'leak.empty': 'Shown after the scan completes.',
+      'leak.note': 'The browser cannot change system settings directly. Clicking “Fix this” downloads a .ps1 script — right-click it and choose “Run with PowerShell” (it requests elevation automatically).<br>WebRTC policy changes take effect after restarting the browser; IPv6 and DNS changes apply immediately. This page can only observe behaviour, not the actual policy switches.<br>If script execution is blocked, run: powershell -ExecutionPolicy Bypass -File .\\privacy-fix.ps1',
+      'leak.btn.fix': 'Fix this', 'leak.btn.harden': 'Harden', 'leak.btn.restore': 'Restore',
+      'leak.downloaded': 'Downloaded', 'leak.downloadedRestore': 'Restore downloaded',
+      'tun.section.title': 'TUN Tunnel Check',
+      'tun.static.title': 'System-level checks (local script required)',
+      'tun.static.value': 'The browser cannot read processes, adapters or routes',
+      'tun.static.detail': 'Checks: v2rayN / sing-box processes, singbox_tun adapter, default route through the tunnel, v2rayN elevation, system proxy state, ports 1080/1081, and exit IP.',
+      'tun.btn.fix': 'Auto-fix', 'tun.btn.run': 'Run check', 'tun.btn.script': 'Download check script',
+      'tun.btn.fallback': 'Fallback mode', 'tun.btn.downloaded': 'Downloaded',
+      'tun.state.detecting': 'Check service: probing…',
+      'tun.note': '“Run check” displays results on this page. The local check service starts automatically at boot (windowless, read-only). If it shows as stopped, run start-tun-check.bat from the same folder.<br>“Auto-fix” triggers a UAC prompt: it disables the system proxy, enables TUN in the v2rayN config, restarts v2rayN elevated, and re-checks automatically. If TUN still cannot start, it falls back to the system proxy so you stay online.<br>“Download check script” can be run standalone in PowerShell. “Fallback mode” only switches to the system proxy when TUN is unhealthy and changes nothing otherwise.<br>Once the service is running you can also open http://127.0.0.1:8788/ directly.',
+      'tun.agent.connected': 'Check service: <span style="color:var(--ok)">connected</span>',
+      'tun.agent.stopped': 'Check service: <span style="color:var(--bad)">not running</span> · double-click start-tun-check.bat in the same folder',
+      'tun.updatedAt': 'updated at {time}', 'tun.updatedAfterFix': 'updated after fix at {time}',
+      'tun.running': 'Running local checks (up to ~30 seconds)…',
+      'tun.notConnected': 'Check service is not running. Run start-tun-check.bat in the same folder; it auto-starts at boot and this page reconnects every 5 seconds.',
+      'tun.conclusion.ok': 'Result: all checks passed.',
+      'tun.conclusion.fail': 'Result: {n} check(s) failed.',
+      'tun.fixing': 'Fixing', 'tun.fixFailed': 'Fix failed',
+      'tun.askAdmin': 'Requesting administrator rights — click “Yes” in the UAC prompt…',
+      'tun.cannotStart': 'Unable to start the fix: {msg} (make sure start-tun-check.bat is running)',
+      'tun.rechecking': 'Fix finished. Re-checking in about 20 seconds…',
+      'tun.waitTimeout': 'Timed out while waiting. Re-checking the current state…',
+      'tun.cannotRead': 'Could not retrieve results after the fix. Make sure the check service is still running.',
+      'tz.section.title': 'System Time Zone (general)',
+      'tz.card.title': 'Current system time zone', 'tz.chip': 'System', 'tz.reading': 'Reading…',
+      'tz.card.detail': 'Changing it requires administrator approval (UAC). The original timezone is saved on first change and can be restored with “Restore”.',
+      'tz.btn.apply': 'Apply', 'tz.btn.restore': 'Restore',
+      'tz.state.detecting': 'Time zone service: probing…',
+      'tz.state.connected': 'Time zone service: <span style="color:var(--ok)">connected</span> · confirm the change in the UAC window',
+      'tz.state.needService': 'Local check service required',
+      'tz.state.stopped': 'Time zone service: <span style="color:var(--bad)">not running</span> · run start-tun-check.bat first',
+      'tz.state.modifyIssued': 'Change requested. Click “Yes” in the UAC window; this page refreshes shortly…',
+      'tz.state.failed': 'Not applied: {msg}',
+      'tz.value': '{display} ({id}, UTC{offset})',
+      'footer.line1': 'All results are computed locally in your browser; nothing is uploaded. IP geolocation is looked up through public APIs.<br>This tool is for environment self-checks and privacy troubleshooting; the score does not guarantee how any platform will treat your account.',
+      'action.fix': 'Fix', 'action.settings': 'Settings', 'action.note': 'Details',
+      'note.IP': 'The exit IP is determined by your proxy node and cannot be changed locally; switch to a residential broadband node instead.',
+      'note.LANG': 'Browser languages are controlled by the browser’s own language settings; this tool does not modify them.',
+      'note.INTL': 'The Intl locale follows the browser UI language, not the Windows regional settings.',
+      'note.FONT': 'Microsoft YaHei, SimSun and similar are CJK fallback fonts bundled with every Windows base image, so they are not counted as risk. Only extra fonts installed by Chinese language packs or Chinese software are flagged.',
+      'note.EMOJI': 'Emoji style is determined by the system emoji font (Segoe UI Emoji on Windows) and is identical worldwide, so it cannot indicate a region. Only missing color emoji is flagged.',
+      'emoji.previewNote': 'The canvas above shows how this system actually renders emoji, which helps identify the OS.',
+      'card.ip.title': 'Network Exit',
+      'card.ip.value': '<b>{ip}</b> · {place}',
+      'card.ip.detail': 'Time zone {tz} · Operator {org}',
+      'card.ip.unknown': 'Unknown',
+      'card.ip.fail.value': 'Lookup failed',
+      'card.ip.fail.detail': 'Public IP APIs are unreachable. This may be network filtering or rate limiting; click “Rescan” to try again.',
+      'card.ip.advice': 'This exit IP belongs to a data-center/cloud provider rather than residential broadband. Such IPs are often flagged separately by risk systems. Prefer a stable residential connection and avoid switching data-center nodes frequently.',
+      'card.tz.title': 'System Time Zone',
+      'card.tz.detail.init': 'Time zone and offset reported by the system.',
+      'card.tz.detail.match': 'Matches the exit IP time zone (0-minute offset).',
+      'card.tz.detail.near': 'Offset from the exit time zone is {diff} minutes; this may be due to daylight saving or a timezone setting difference.',
+      'card.tz.detail.far': 'Offset from the exit time zone is {hours} hour(s). This is a classic environment contradiction.',
+      'card.tz.detail.cn': 'Chinese time zone detected: {name}, a strong signal of a Chinese environment.',
+      'card.tz.advice.near': 'The system time zone differs from the exit time zone. Keep them aligned to avoid contradictions such as “IP in the US but clock on UTC+8”.',
+      'card.tz.advice.far': 'The system time zone is far from the exit time zone. If you use a proxy/VPN, set the system timezone to match the exit region; otherwise servers will spot the mismatch immediately.',
+      'card.tz.advice.cn': 'Your system timezone is a Chinese standard timezone. If your exit is outside China, align the system timezone with the exit region to avoid an obvious contradiction.',
+      'card.lang.title': 'Browser Language',
+      'card.lang.detail.init': 'Language priority list declared by the browser.',
+      'card.lang.detail.match': 'Matches the common language(s) of the exit region ({country}).',
+      'card.lang.detail.mismatch': 'Exit region is {country}; expected language(s): {expected}. Browser primary language is {primary}.',
+      'card.lang.advice': 'The browser’s primary language does not match the exit region (e.g. IP in the US but zh-CN first). Move the target region’s language to the top of the browser language list and keep it consistent with the system language.',
+      'card.font.title': 'Font Fingerprint',
+      'card.font.value': 'Extra CJK {add} · Domestic vendor {vendor} · Latin {latin}',
+      'card.font.detail.summary': '{add} extra CJK font(s), {vendor} domestic vendor font(s), {latin} Latin font(s); {base} built-in CJK fallback font(s).',
+      'card.font.detail.zhRegion': ' Exit region {country} is a Chinese-speaking region; the font set matches it.',
+      'card.font.detail.nonZhHit': ' Exit region is {country}, but Chinese/domestic fonts are installed: {names}.',
+      'card.font.detail.nonZhNone': ' Exit region is {country}; no extra Chinese or domestic vendor fonts detected.',
+      'card.font.advice': 'These fonts usually come with Chinese language packs, domestic OS builds or Chinese software and are rare on pure-English systems, making them a strong regional signal. Built-in fallbacks such as Microsoft YaHei and SimSun are excluded.',
+      'card.intl.title': 'Intl Locale',
+      'card.intl.detail.init': 'Default locale reported by the JS Intl API.',
+      'card.intl.detail.match': 'Locale matches the exit region ({region}).',
+      'card.intl.detail.mismatch': 'Intl locale is {region}, which differs from exit region {country}.',
+      'card.off.title': 'Timezone Offset',
+      'card.off.detail': 'Cross-checks the system timezone; normal on its own, but it must match the exit timezone.',
+      'card.emoji.title': 'Emoji Rendering',
+      'card.emoji.value': 'Hash {hash} · colored pixels {colored}',
+      'card.emoji.detail.init': 'Different systems render different emoji bitmaps, which corroborates the OS type.',
+      'card.emoji.detail.missing': 'Windows should render color emoji via Segoe UI Emoji, but no colored pixels were detected. The emoji font may be missing or this may be a headless/screenshot environment.',
+      'card.emoji.detail.winOk': 'Windows always renders with Segoe UI Emoji; this is identical worldwide, so it only corroborates the OS type.',
+      'card.gl.title': 'WebGL Renderer',
+      'card.gl.detail': 'Vendor {vendor} · Inferred OS {os} · UA platform {platform}',
+      'card.gl.osUnknown': 'Unknown', 'card.gl.unavailable': 'WebGL unavailable', 'card.gl.readFail': 'Read failed',
+      'card.canvas.title': 'Canvas Fingerprint',
+      'card.canvas.detail': 'Determined by fonts, anti-aliasing and GPU drivers; usually stable on the same device.',
+      'card.audio.title': 'Audio Fingerprint',
+      'card.audio.detail': 'Subtle differences in the audio stack can also identify a device and are hard to change.',
+      'card.hw.title': 'Hardware & Screen',
+      'card.hw.value': 'CPU {cores} cores · Memory {mem} · {screen}',
+      'card.hw.detail': 'Language {lang} · Touch points {touch} · Platform {platform}',
+      'card.hw.unknown': 'Unknown', 'card.hw.notExposed': 'Not exposed',
+      'card.rtc.title': 'WebRTC Local IP',
+      'card.rtc.value.none': 'No candidate IP detected',
+      'card.rtc.detail.none': 'No candidates returned, or hidden by browser mDNS (normal).',
+      'card.rtc.detail.private': 'Only private addresses exposed (or hidden by mDNS); no public IP leaked.',
+      'card.rtc.detail.match': 'Public WebRTC candidates match the HTTP exit. Traffic goes through the proxy; the real IP is not leaked.',
+      'card.rtc.detail.mismatch': 'Public IPs exposed by WebRTC differ from the HTTP exit. This risks leaking your real IP.',
+      'card.rtc.detail.publicOnly': 'Public candidate addresses exposed, but the HTTP exit is unavailable, so consistency cannot be verified.',
+      'card.v6.title': 'IPv6 Bypass',
+      'card.v6.value.none': 'No IPv6 exit detected',
+      'card.v6.detail.none': 'IPv6 is not reachable from this machine, so IPv6 traffic cannot bypass the proxy.',
+      'card.v6.detail.match': 'IPv6 exit matches the HTTP exit; no bypass detected.',
+      'card.v6.detail.mismatch': 'This machine can reach IPv6 directly and it differs from the proxy exit ({exit}). IPv6 traffic may bypass the proxy and expose your real address.',
+      'card.v6.advice': 'IPv6 is reachable directly and differs from the proxy exit. Disable IPv6 binding on the adapter, or enable “block IPv6 / route IPv6 through proxy” in your proxy client.',
+      'card.dns.title': 'DNS Exit',
+      'card.dns.value.fail': 'Lookup failed',
+      'card.dns.detail.fail': 'The DNS exit API is unreachable; try again later.',
+      'card.dns.detail.sameIp': 'The DNS exit is the same address as the HTTP exit, so DNS queries also go through the proxy. No leak.',
+      'card.dns.detail.sameCountry': 'The DNS exit is in the same country as the HTTP exit ({country}) but uses a different address. With public resolvers (8.8.8.8 / 1.1.1.1) the recursive exit is the resolver’s own address, so this is normal. No cross-region leak found.',
+      'card.dns.detail.leak': 'The DNS exit is in {geo}, which differs from the HTTP exit region. DNS leak detected.',
+      'card.dns.advice': 'DNS queries do not go through the proxy, so their region differs from your traffic. Enable TUN/global mode with DNS override in your proxy client, or configure encrypted DNS (DoH) locally.',
+      'card.tun.title': 'Tunnel Check',
+      'card.tun.value': '{ok}/{total} passed',
+      'card.tun.unavailable': 'The local check service is not running, so this cannot be evaluated.',
+      'card.tun.pass': 'All checks passed.',
+      'card.tun.failDetail': 'Failed: {names}',
+      'card.tun.noData': '—',
+      'leak.rtc.title': 'WebRTC real IP leak',
+      'leak.rtc.value.none': 'No candidates or private addresses only',
+      'leak.rtc.value.match': '{ips} (matches exit {exit})',
+      'leak.rtc.value.mismatch': 'Exposes {ips} (differs from exit {exit})',
+      'leak.rtc.value.public': 'Public candidates exposed: {ips}',
+      'leak.rtc.detail': 'WebRTC can bypass the proxy and expose your public address. Fix: apply the browser policy disable_non_proxied_udp and block outbound UDP from Chrome/Edge at the firewall (the firewall covers cases where the policy is not loaded).',
+      'leak.v6.title': 'IPv6 bypasses proxy',
+      'leak.v6.detail': 'If IPv6 is reachable while the proxy only handles IPv4, traffic bypasses the proxy. Fix: disable the ms_tcpip6 binding on your adapters.',
+      'leak.dns.title': 'DNS exit consistency',
+      'leak.dns.detail': 'Compares the DNS recursive exit with the HTTP exit (address and region). Fix: enable DNS override in your proxy client or configure encrypted DNS.',
+      'report.title': 'Environment Consistency Report',
+      'report.time': 'Generated at: {time}',
+      'report.score': 'Risk score: {score} / 100',
+      'report.leakHeader': '-- Privacy leaks --',
+      'report.ip': 'IP: {value}', 'report.tz': 'Time zone: {value}', 'report.lang': 'Languages: {value}',
+      'report.fonts': 'Fonts: {value}', 'report.webgl': 'WebGL: {value}',
+      'report.canvas': 'Canvas: {canvas}  Audio: {audio}', 'report.na': 'unavailable',
+      'toast.allPass': 'All checks passed',
+      'toast.stillFail': '{n} check(s) still failing — see details'
+    }
+  };
+
+  let LANG = 'zh';
+
+  function t(key, params) {
+    const dict = I18N[LANG] || I18N.zh;
+    let s = dict[key];
+    if (s == null) s = I18N.zh[key];
+    if (s == null) s = key;
+    if (params) {
+      s = s.replace(/\{(\w+)\}/g, function (m, k) {
+        return params[k] != null ? params[k] : m;
+      });
+    }
+    return s;
+  }
+
+  function cardText(v) {
+    return typeof v === 'function' ? v() : (v == null ? '' : v);
+  }
+
+  function hashStr(str) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+
+  function offsetLabel(min) {
+    const sign = min >= 0 ? '+' : '-';
+    const a = Math.abs(min);
+    return 'UTC' + sign + pad(Math.floor(a / 60)) + ':' + pad(a % 60);
+  }
+
+  /* 计算任意 IANA 时区当前相对 UTC 的偏移（分钟） */
+  function tzOffsetMinutes(tz) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, timeZoneName: 'shortOffset'
+      }).formatToParts(new Date());
+      const name = (parts.find(p => p.type === 'timeZoneName') || {}).value || '';
+      const m = name.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+      if (!m) return 0;
+      const sign = m[1] === '-' ? -1 : 1;
+      return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || '0', 10));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* ---------- 常量 ---------- */
+  /* Windows 基础镜像自带的 CJK 回退字体，任何语言版本都存在，不能作为地区特征 */
+  const CJK_BASE_FONTS = [
+    'Microsoft YaHei', 'Microsoft YaHei UI', 'SimSun', 'NSimSun',
+    'Microsoft JhengHei', 'Microsoft JhengHei UI', 'MingLiU', 'PMingLiU'
+  ];
+  /* 通常随中文语言功能或中文软件出现的附加字体，地区相关性更强 */
+  const ZH_FONTS = [
+    'SimHei', 'KaiTi', 'FangSong', 'DengXian', 'STKaiti', 'STFangsong',
+    'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Source Han Sans SC',
+    'WenQuanYi Micro Hei'
+  ];
+  const LATIN_FONTS = [
+    'Arial', 'Segoe UI', 'Helvetica Neue', 'Times New Roman', 'Georgia',
+    'Verdana', 'Tahoma', 'Courier New', 'Consolas'
+  ];
+  /* 国产厂商字体：国产系统/办公软件或中文发行版常见，纯英文系统一般不存在 */
+  const VENDOR_FONTS = [
+    'MiSans', 'MiSans Latin', 'HarmonyOS Sans', 'HarmonyOS Sans SC',
+    'OPPO Sans', 'OPPO Sans Regular', 'vivo Sans', 'vivo Sans SC',
+    'FZShuTi', 'FZYaoti', 'FZHei-B01', 'FZKai-Z03', 'FZFangSong-Z02',
+    'FZXiaoBiaoSong-B05S', 'FZLanTingHeiS-R-GB'
+  ];
+  /* 中国标准时区名：命中即为强地域特征 */
+  const CN_TZ_NAMES = ['Asia/Shanghai', 'Asia/Urumqi', 'Asia/Chongqing', 'Asia/Harbin', 'PRC'];
+  const HOSTING_HINTS = [
+    'amazon', 'aws', 'cloudflare', 'digitalocean', 'linode', 'vultr', 'google',
+    'microsoft', 'azure', 'ovh', 'hetzner', 'oracle', 'alibaba', 'aliyun',
+    'tencent', 'm247', 'choopa', 'leaseweb', 'colocrossing', 'contabo',
+    'it7', '16clouds', 'hostinger', 'racknerd', 'bandwagon', 'vps', 'datacenter', 'server'
+  ];
+  const COUNTRY_LANG = {
+    US:['en'], GB:['en'], AU:['en'], NZ:['en'], IE:['en','ga'], CA:['en','fr'],
+    SG:['en','zh','ms','ta'], HK:['zh','en'], TW:['zh'], CN:['zh'], MO:['zh','pt'],
+    JP:['ja'], KR:['ko'], DE:['de'], FR:['fr'], ES:['es'], IT:['it'], NL:['nl'],
+    PT:['pt'], BR:['pt'], RU:['ru'], IN:['en','hi'], ID:['id'], TH:['th'],
+    VN:['vi'], PH:['en','tl'], MY:['ms','en'], TR:['tr'], SA:['ar'], AE:['ar','en'],
+    IL:['he'], PL:['pl'], SE:['sv'], NO:['no'], DK:['da'], FI:['fi'], CH:['de','fr','it']
+  };
+
+  /* ---------- 采集器 ---------- */
+  /* 字体检测：中文字符在所有中文字体中都是全角等宽，宽度法会漏判，
+     这里改用 canvas 像素指纹比对（字形不同 → 像素哈希不同）。 */
+  function fontHash(fontName, sample, isGeneric) {
+    const c = document.createElement('canvas');
+    c.width = 320; c.height = 64;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff';
+    x.fillRect(0, 0, 320, 64);
+    x.fillStyle = '#000';
+    x.textBaseline = 'middle';
+    x.font = '28px ' + (isGeneric ? fontName : '"' + fontName + '", monospace');
+    x.fillText(sample, 4, 32);
+    const d = x.getImageData(0, 0, 320, 64).data;
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < d.length; i += 16) {
+      h ^= d[i] + (d[i + 1] << 8) + (d[i + 2] << 16);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+
+  function detectFonts(list, sample) {
+    const baseSet = {
+      [fontHash('monospace', sample, true)]: 1,
+      [fontHash('sans-serif', sample, true)]: 1,
+      [fontHash('serif', sample, true)]: 1
+    };
+    const found = [];
+    list.forEach(font => {
+      if (!baseSet[fontHash(font, sample, false)]) found.push(font);
+    });
+    return found;
+  }
+
+  function canvasFingerprint() {
+    const c = document.createElement('canvas');
+    c.width = 260; c.height = 70;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 260, 70);
+    g.addColorStop(0, '#f60');
+    g.addColorStop(0.5, '#0af');
+    g.addColorStop(1, '#3c3');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 260, 70);
+    x.fillStyle = 'rgba(20,20,30,.85)';
+    x.font = '17px "Arial"';
+    x.fillText('Cwm fjord bank glyphs vext quiz', 6, 26);
+    x.strokeStyle = 'rgba(255,255,255,.7)';
+    x.beginPath();
+    x.arc(210, 46, 18, 0, Math.PI * 2);
+    x.stroke();
+    const data = c.toDataURL();
+    return { hash: hashStr(data), data: data };
+  }
+
+  function emojiSignature() {
+    const c = document.createElement('canvas');
+    c.width = 72; c.height = 72;
+    const x = c.getContext('2d');
+    x.fillStyle = '#0b0f16';
+    x.fillRect(0, 0, 72, 72);
+    x.font = '54px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+    x.textBaseline = 'middle';
+    x.fillText('\u{1F600}', 9, 38);
+    const d = x.getImageData(0, 0, 72, 72).data;
+    let h = 2166136261 >>> 0, colored = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      h ^= d[i] + (d[i+1] << 8) + (d[i+2] << 16);
+      h = Math.imul(h, 16777619);
+      if (d[i] > d[i+2] + 25 && d[i] > 120) colored++;
+    }
+    return { hash: (h >>> 0).toString(16).padStart(8, '0'), colored: colored, canvas: c };
+  }
+
+  function webglInfo() {
+    try {
+      const c = document.createElement('canvas');
+      const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) return { vendor: 'N/A', renderer: 'N/A', error: 'unavailable' };
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      return {
+        vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR),
+        renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)
+      };
+    } catch (e) {
+      return { vendor: 'N/A', renderer: 'N/A', error: 'read' };
+    }
+  }
+
+  function audioFingerprint() {
+    return new Promise(resolve => {
+      try {
+        const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        if (!Ctx) return resolve({ hash: 'unsupported' });
+        const ctx = new Ctx(1, 44100, 44100);
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.value = 10000;
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -50;
+        comp.knee.value = 40;
+        comp.ratio.value = 12;
+        comp.attack.value = 0;
+        comp.release.value = 0.25;
+        osc.connect(comp);
+        comp.connect(ctx.destination);
+        osc.start(0);
+        ctx.startRendering().then(buf => {
+          const data = buf.getChannelData(0);
+          let sum = 0;
+          for (let i = 4500; i < 5000; i++) sum += Math.abs(data[i]);
+          resolve({ hash: hashStr(sum.toFixed(6)) });
+        }).catch(() => resolve({ hash: 'error' }));
+      } catch (e) {
+        resolve({ hash: 'error' });
+      }
+    });
+  }
+
+  function webrtcIP(timeout) {
+    return new Promise(resolve => {
+      if (!window.RTCPeerConnection) return resolve({ supported: false, ips: [] });
+      const ips = new Set();
+      let done = false;
+      let pc;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        try { pc && pc.close(); } catch (e) {}
+        resolve({ supported: true, ips: Array.from(ips) });
+      };
+      try {
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        pc.onicecandidate = (e) => {
+          if (!e.candidate) return finish();
+          const cand = e.candidate.candidate || '';
+          const m = cand.match(/(\d{1,3}(?:\.\d{1,3}){3})/);
+          if (m) ips.add(m[0]);
+        };
+        pc.createDataChannel('probe');
+        pc.createOffer().then(o => pc.setLocalDescription(o)).catch(finish);
+      } catch (e) {
+        finish();
+      }
+      setTimeout(finish, timeout || 2600);
+    });
+  }
+
+  async function fetchIP() {
+    const sources = [
+      {
+        url: 'https://ipapi.co/json/',
+        map: d => ({
+          ip: d.ip, country: d.country_code, countryName: d.country_name,
+          city: d.city, region: d.region, timezone: d.timezone, org: d.org
+        })
+      },
+      {
+        url: 'https://ipinfo.io/json',
+        map: d => ({
+          ip: d.ip, country: d.country, countryName: d.country,
+          city: d.city, region: d.region, timezone: d.timezone, org: d.org
+        })
+      }
+    ];
+    for (const s of sources) {
+      try {
+        const r = await fetch(s.url, { cache: 'no-store' });
+        if (!r.ok) continue;
+        const d = await r.json();
+        if (d.error || !d.ip) continue;
+        return s.map(d);
+      } catch (e) { /* 尝试下一个源 */ }
+    }
+    return null;
+  }
+
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+    ]);
+  }
+
+  /* IPv6 连通性：api6.ipify.org 只有 AAAA 记录，能返回即说明本机可直连 IPv6 */
+  async function fetchIPv6() {
+    try {
+      const r = await withTimeout(fetch('https://api6.ipify.org?format=json', { cache: 'no-store' }), 4500);
+      if (!r.ok) return null;
+      const d = await r.json();
+      return d && d.ip ? d.ip : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* DNS 出口：该接口返回递归 DNS 的出口 IP 与地区 */
+  async function fetchDNSInfo() {
+    try {
+      const r = await withTimeout(fetch('https://edns.ip-api.com/json', { cache: 'no-store' }), 4500);
+      if (!r.ok) return null;
+      const d = await r.json();
+      return d && d.dns ? d.dns : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* ---------- 组装检测项 ---------- */
+  function makeCard(o) {
+    return {
+      code: o.code || '--',
+      title: o.title,
+      value: o.value || '',
+      detail: o.detail || '',
+      status: o.status || 'info',
+      weight: o.weight || 1,
+      sim: typeof o.sim === 'number' ? o.sim : 0,
+      extra: o.extra || '',
+      advice: o.advice || null
+    };
+  }
+
+  async function runChecks() {
+    const cards = [];
+    const langs = Array.from(navigator.languages || [navigator.language || 'en']);
+    const intlLocale = (Intl.DateTimeFormat().resolvedOptions().locale) || navigator.language;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+    const browserOffset = -new Date().getTimezoneOffset();
+
+    /* 网络出口 / IPv6 / DNS / TUN 并行探测 */
+    const tunPromise = fetchTunCheck();
+    const probe = await Promise.all([fetchIP(), fetchIPv6(), fetchDNSInfo()]);
+    const ipData = probe[0];
+    const ipv6 = probe[1];
+    const dnsInfo = probe[2];
+    let ipOffset = null;
+    let hosting = false;
+    if (ipData) {
+      if (ipData.timezone) ipOffset = tzOffsetMinutes(ipData.timezone);
+      const orgLower = String(ipData.org || '').toLowerCase();
+      hosting = HOSTING_HINTS.some(k => orgLower.indexOf(k) !== -1);
+      cards.push(makeCard({
+        code: 'IP',
+        title: function () { return t('card.ip.title'); },
+        value: function () {
+          return t('card.ip.value', {
+            ip: esc(ipData.ip || t('card.ip.unknown')),
+            place: esc(((ipData.city || '') + ' ' + (ipData.country || '')).trim())
+          });
+        },
+        detail: function () {
+          return t('card.ip.detail', {
+            tz: esc(ipData.timezone || '-'),
+            org: esc(ipData.org || t('card.ip.unknown'))
+          });
+        },
+        status: hosting ? 'warn' : 'ok',
+        weight: 14,
+        sim: hosting ? 0.7 : 0,
+        advice: hosting ? function () { return t('card.ip.advice'); } : null
+      }));
+    } else {
+      cards.push(makeCard({
+        code: 'IP',
+        title: function () { return t('card.ip.title'); },
+        value: function () { return t('card.ip.fail.value'); },
+        detail: function () { return t('card.ip.fail.detail'); },
+        status: 'warn',
+        weight: 14,
+        sim: 0
+      }));
+    }
+
+    /* 时区一致性 */
+    const cnTzName = CN_TZ_NAMES.find(function (n) {
+      return n.toLowerCase() === String(tz).toLowerCase();
+    }) || null;
+    let tzStatus = 'info', tzDetail, tzAdvice = null, tzSim = 0;
+    tzDetail = function () { return t('card.tz.detail.init'); };
+    const tzLine = esc(tz) + ' · ' + offsetLabel(browserOffset);
+    if (cnTzName) {
+      /* 命中中国时区名，优先于偏移差判断 */
+      tzStatus = 'bad';
+      tzSim = 1;
+      tzDetail = function () { return t('card.tz.detail.cn', { name: esc(cnTzName) }); };
+      tzAdvice = function () { return t('card.tz.advice.cn'); };
+    } else if (ipOffset !== null) {
+      const diff = Math.abs(ipOffset - browserOffset);
+      if (diff === 0) {
+        tzStatus = 'ok';
+        tzSim = 0;
+        tzDetail = function () { return t('card.tz.detail.match'); };
+      } else if (diff <= 60) {
+        tzStatus = 'warn';
+        tzSim = 0.5;
+        tzDetail = function () { return t('card.tz.detail.near', { diff: diff }); };
+        tzAdvice = function () { return t('card.tz.advice.near'); };
+      } else {
+        tzStatus = 'bad';
+        tzSim = 1;
+        tzDetail = function () { return t('card.tz.detail.far', { hours: Math.round(diff / 60) }); };
+        tzAdvice = function () { return t('card.tz.advice.far'); };
+      }
+    }
+    cards.push(makeCard({
+      code: 'TZ', title: function () { return t('card.tz.title'); }, value: tzLine, detail: tzDetail,
+      status: tzStatus, weight: 18, sim: tzSim, advice: tzAdvice
+    }));
+
+    /* 语言一致性 */
+    let langStatus = 'info', langSim = 0, langAdvice = null;
+    let langDetail = function () { return t('card.lang.detail.init'); };
+    if (ipData && ipData.country) {
+      const expected = COUNTRY_LANG[ipData.country] || ['en'];
+      const primary = langs.map(l => String(l).split('-')[0].toLowerCase());
+      const matched = primary.some(p => expected.indexOf(p) !== -1);
+      const expLabel = expected.join('/');
+      const priLabel = primary[0] || 'en';
+      if (matched) {
+        langStatus = 'ok';
+        langSim = 0;
+        langDetail = function () { return t('card.lang.detail.match', { country: esc(ipData.country) }); };
+      } else {
+        langStatus = 'warn';
+        langSim = 1;
+        langDetail = function () {
+          return t('card.lang.detail.mismatch', {
+            country: esc(ipData.country), expected: esc(expLabel), primary: esc(priLabel)
+          });
+        };
+        langAdvice = function () { return t('card.lang.advice'); };
+      }
+    }
+    cards.push(makeCard({
+      code: 'LANG', title: function () { return t('card.lang.title'); },
+      value: '<b>' + esc(langs.join(', ')) + '</b>',
+      detail: langDetail, status: langStatus, weight: 14, sim: langSim, advice: langAdvice
+    }));
+
+    /* 字体 */
+    const zhBaseFonts = detectFonts(CJK_BASE_FONTS, '中文字体AaGgWm0123');
+    const zhFonts = detectFonts(ZH_FONTS, '中文字体AaGgWm0123');
+    const vendorFonts = detectFonts(VENDOR_FONTS, '中文字体AaGgWm0123');
+    const latinFonts = detectFonts(LATIN_FONTS, 'mmmmmmmmmmlliWWWWMW');
+    const zhRegion = !!(ipData && ipData.country && ['CN', 'TW', 'HK', 'MO', 'SG'].indexOf(ipData.country) !== -1);
+    const extraFonts = zhFonts.concat(vendorFonts);
+    let fontStatus = 'info', fontSim = 0, fontAdvice = null;
+    if (ipData && ipData.country) {
+      if (zhRegion) {
+        fontStatus = 'ok';
+        fontSim = 0;
+      } else if (extraFonts.length >= 3) {
+        fontStatus = 'warn';
+        fontSim = 1;
+      } else if (extraFonts.length >= 1) {
+        fontStatus = 'warn';
+        fontSim = 0.6;
+      } else {
+        fontStatus = 'ok';
+        fontSim = 0;
+      }
+      if (fontSim > 0) fontAdvice = function () { return t('card.font.advice'); };
+    }
+    const extraNames = function () {
+      return extraFonts.join(LANG === 'zh' ? '、' : ', ');
+    };
+    const fontDetail = function () {
+      let s = t('card.font.detail.summary', {
+        add: zhFonts.length, vendor: vendorFonts.length,
+        latin: latinFonts.length, base: zhBaseFonts.length
+      });
+      if (ipData && ipData.country) {
+        if (zhRegion) {
+          s += t('card.font.detail.zhRegion', { country: esc(ipData.country) });
+        } else if (extraFonts.length) {
+          s += t('card.font.detail.nonZhHit', { country: esc(ipData.country), names: esc(extraNames()) });
+        } else {
+          s += t('card.font.detail.nonZhNone', { country: esc(ipData.country) });
+        }
+      }
+      return s;
+    };
+    const fontTags = zhBaseFonts.concat(zhFonts, vendorFonts, latinFonts).map(f => '<span class="tag">' + esc(f) + '</span>').join('');
+    cards.push(makeCard({
+      code: 'FONT', title: function () { return t('card.font.title'); },
+      value: function () {
+        return t('card.font.value', { add: zhFonts.length, vendor: vendorFonts.length, latin: latinFonts.length });
+      },
+      detail: fontDetail, status: fontStatus, weight: 11, sim: fontSim,
+      extra: '<div class="fonts">' + fontTags + '</div>',
+      advice: fontAdvice
+    }));
+
+    /* Intl 区域 */
+    let intlStatus = 'info', intlSim = 0;
+    let intlDetail = function () { return t('card.intl.detail.init'); };
+    if (ipData && ipData.country) {
+      const region = (intlLocale.split('-')[1] || '').toUpperCase();
+      if (region && region !== ipData.country) {
+        intlStatus = 'warn';
+        intlSim = 1;
+        intlDetail = function () {
+          return t('card.intl.detail.mismatch', { region: esc(region), country: esc(ipData.country) });
+        };
+      } else {
+        intlStatus = 'ok';
+        intlSim = 0;
+        intlDetail = function () { return t('card.intl.detail.match', { region: esc(region || '—') }); };
+      }
+    }
+    cards.push(makeCard({
+      code: 'INTL', title: function () { return t('card.intl.title'); }, value: esc(intlLocale),
+      detail: intlDetail, status: intlStatus, weight: 6, sim: intlSim
+    }));
+
+    /* 时区偏移 */
+    const offMismatch = (ipOffset !== null && ipOffset !== browserOffset);
+    cards.push(makeCard({
+      code: 'OFF', title: function () { return t('card.off.title'); }, value: offsetLabel(browserOffset),
+      detail: function () { return t('card.off.detail'); },
+      status: offMismatch ? 'warn' : 'ok', weight: 4, sim: offMismatch ? 0.7 : 0
+    }));
+
+    /* Emoji 渲染风格 */
+    const emoji = emojiSignature();
+    const uaPlatform = (navigator.userAgentData && navigator.userAgentData.platform) ||
+                       navigator.platform || '';
+    const isWindows = /win/i.test(uaPlatform);
+    let emojiStatus = 'info', emojiDetail = function () { return t('card.emoji.detail.init'); };
+    const emojiSim = emoji.colored === 0 ? 0.5 : 0;
+    if (isWindows && emoji.colored === 0) {
+      emojiStatus = 'warn';
+      emojiDetail = function () { return t('card.emoji.detail.missing'); };
+    } else if (isWindows) {
+      emojiDetail = function () { return t('card.emoji.detail.winOk'); };
+    }
+    cards.push(makeCard({
+      code: 'EMOJI', title: function () { return t('card.emoji.title'); },
+      value: function () { return t('card.emoji.value', { hash: emoji.hash, colored: emoji.colored }); },
+      detail: emojiDetail, status: emojiStatus, weight: 3, sim: emojiSim,
+      extra: '<div class="emoji-preview"></div>'
+    }));
+
+    /* WebGL */
+    const gl = webglInfo();
+    const glText = String(gl.renderer || '');
+    let glOS = '';
+    if (/direct3d|d3d11|angle.*d3d/i.test(glText)) glOS = 'Windows';
+    else if (/apple|metal/i.test(glText)) glOS = 'macOS';
+    else if (/mesa|llvmpipe|swrast/i.test(glText)) glOS = 'Linux';
+    else if (/adreno|mali/i.test(glText)) glOS = 'Android';
+    cards.push(makeCard({
+      code: 'GL', title: function () { return t('card.gl.title'); },
+      value: function () {
+        if (gl.error === 'unavailable') return esc(t('card.gl.unavailable'));
+        if (gl.error === 'read') return esc(t('card.gl.readFail'));
+        return esc(glText || 'N/A');
+      },
+      detail: function () {
+        return t('card.gl.detail', {
+          vendor: esc(gl.vendor || 'N/A'),
+          os: esc(glOS || t('card.gl.osUnknown')),
+          platform: esc(uaPlatform || 'N/A')
+        });
+      },
+      status: 'info', weight: 3, sim: 0
+    }));
+
+    /* Canvas 指纹 */
+    const canvas = canvasFingerprint();
+    cards.push(makeCard({
+      code: 'CANVAS', title: function () { return t('card.canvas.title'); },
+      value: 'Hash ' + canvas.hash,
+      detail: function () { return t('card.canvas.detail'); },
+      status: 'info', weight: 2, sim: 0
+    }));
+
+    /* 音频指纹 */
+    const audio = await audioFingerprint();
+    cards.push(makeCard({
+      code: 'AUDIO', title: function () { return t('card.audio.title'); },
+      value: 'Hash ' + audio.hash,
+      detail: function () { return t('card.audio.detail'); },
+      status: 'info', weight: 2, sim: 0
+    }));
+
+    /* 硬件信息 */
+    const cores = navigator.hardwareConcurrency;
+    const mem = navigator.deviceMemory ? navigator.deviceMemory + ' GB' : null;
+    const screenInfo = (screen.width + '×' + screen.height) + ' @' + (window.devicePixelRatio || 1) + 'x';
+    cards.push(makeCard({
+      code: 'HW', title: function () { return t('card.hw.title'); },
+      value: function () {
+        return t('card.hw.value', {
+          cores: cores || t('card.hw.unknown'),
+          mem: mem || t('card.hw.notExposed'),
+          screen: screenInfo
+        });
+      },
+      detail: function () {
+        return t('card.hw.detail', {
+          lang: esc(navigator.language),
+          touch: navigator.maxTouchPoints || 0,
+          platform: esc(uaPlatform || t('card.hw.unknown'))
+        });
+      },
+      status: 'info', weight: 2, sim: 0
+    }));
+
+    /* WebRTC */
+    const rtc = await webrtcIP(2600);
+    const rtcPublicIps = rtc.ips.filter(ip => !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.|169\.254\.)/.test(ip));
+    let rtcStatus = 'info', rtcSim = 0;
+    let rtcValue = function () { return t('card.rtc.value.none'); };
+    let rtcDetail = function () { return t('card.rtc.detail.none'); };
+    if (rtc.supported && rtc.ips.length) {
+      rtcValue = function () { return esc(rtc.ips.join(', ')); };
+      if (!rtcPublicIps.length) {
+        rtcStatus = 'ok';
+        rtcSim = 0;
+        rtcDetail = function () { return t('card.rtc.detail.private'); };
+      } else if (ipData && ipData.ip && rtcPublicIps.every(ip => ip === ipData.ip)) {
+        rtcStatus = 'ok';
+        rtcSim = 0;
+        rtcDetail = function () { return t('card.rtc.detail.match'); };
+      } else if (!ipData || !ipData.ip) {
+        rtcStatus = 'warn';
+        rtcSim = 0.6;
+        rtcDetail = function () { return t('card.rtc.detail.publicOnly'); };
+      } else {
+        rtcStatus = 'bad';
+        rtcSim = 1;
+        rtcDetail = function () { return t('card.rtc.detail.mismatch'); };
+      }
+    }
+    cards.push(makeCard({
+      code: 'RTC', title: function () { return t('card.rtc.title'); }, value: rtcValue,
+      detail: rtcDetail, status: rtcStatus, weight: 6, sim: rtcSim
+    }));
+
+    /* IPv6 绕过 */
+    let v6Status = 'ok', v6Sim = 0, v6Advice = null;
+    let v6Value = function () { return t('card.v6.value.none'); };
+    let v6Detail = function () { return t('card.v6.detail.none'); };
+    if (ipv6) {
+      v6Value = function () { return esc(ipv6); };
+      if (ipData && ipData.ip === ipv6) {
+        v6Status = 'ok';
+        v6Sim = 0;
+        v6Detail = function () { return t('card.v6.detail.match'); };
+      } else {
+        v6Status = 'bad';
+        v6Sim = 1;
+        v6Detail = function () {
+          const exitIp = ipData && ipData.ip ? ipData.ip : t('card.ip.unknown');
+          return t('card.v6.detail.mismatch', { exit: esc(exitIp) });
+        };
+        v6Advice = function () { return t('card.v6.advice'); };
+      }
+    }
+    cards.push(makeCard({
+      code: 'V6', title: function () { return t('card.v6.title'); }, value: v6Value,
+      detail: v6Detail, status: v6Status, weight: 5, sim: v6Sim, advice: v6Advice
+    }));
+
+    /* DNS 出口 */
+    let dnsStatus = 'info', dnsSim = 0, dnsAdvice = null;
+    let dnsValue = function () { return t('card.dns.value.fail'); };
+    let dnsDetail = function () { return t('card.dns.detail.fail'); };
+    if (dnsInfo) {
+      dnsValue = function () {
+        return esc((dnsInfo.ip || t('card.ip.unknown')) + ' · ' + (dnsInfo.geo || t('card.ip.unknown')));
+      };
+      const sameIp = ipData && dnsInfo.ip && dnsInfo.ip === ipData.ip;
+      const geoLower = String(dnsInfo.geo || '').toLowerCase();
+      const sameCountry = ipData && ipData.countryName &&
+        geoLower.indexOf(String(ipData.countryName).toLowerCase()) !== -1;
+      if (sameIp) {
+        dnsStatus = 'ok';
+        dnsSim = 0;
+        dnsDetail = function () { return t('card.dns.detail.sameIp'); };
+      } else if (sameCountry) {
+        dnsStatus = 'ok';
+        dnsSim = 0;
+        dnsDetail = function () {
+          return t('card.dns.detail.sameCountry', { country: esc(ipData.countryName || '—') });
+        };
+      } else {
+        dnsStatus = 'bad';
+        dnsSim = 1;
+        dnsDetail = function () {
+          return t('card.dns.detail.leak', { geo: esc(dnsInfo.geo || t('card.ip.unknown')) });
+        };
+        dnsAdvice = function () { return t('card.dns.advice'); };
+      }
+    }
+    cards.push(makeCard({
+      code: 'DNS', title: function () { return t('card.dns.title'); }, value: dnsValue,
+      detail: dnsDetail, status: dnsStatus, weight: 4, sim: dnsSim, advice: dnsAdvice
+    }));
+
+    /* 修复面板数据 */
+    let rtcLeakStatus = 'ok';
+    let rtcLeakValue = function () { return t('leak.rtc.value.none'); };
+    if (rtc.ips.length) {
+      if (rtcPublicIps.length) {
+        rtcLeakValue = function () { return t('leak.rtc.value.public', { ips: esc(rtcPublicIps.join(', ')) }); };
+        if (ipData && ipData.ip && rtcPublicIps.every(ip => ip === ipData.ip)) {
+          rtcLeakStatus = 'ok';
+          rtcLeakValue = function () {
+            return t('leak.rtc.value.match', { ips: esc(rtcPublicIps.join(', ')), exit: esc(ipData.ip) });
+          };
+        } else if (ipData && ipData.ip) {
+          rtcLeakStatus = 'bad';
+          rtcLeakValue = function () {
+            return t('leak.rtc.value.mismatch', { ips: esc(rtcPublicIps.join(', ')), exit: esc(ipData.ip) });
+          };
+        } else {
+          rtcLeakStatus = 'warn';
+        }
+      }
+    }
+    const leaks = [
+      {
+        code: 'RTC', title: function () { return t('leak.rtc.title'); }, status: rtcLeakStatus,
+        value: rtcLeakValue,
+        detail: function () { return t('leak.rtc.detail'); },
+        task: 'WebRTC', fixable: true
+      },
+      {
+        code: 'V6', title: function () { return t('leak.v6.title'); }, status: v6Status,
+        value: v6Value,
+        detail: function () { return t('leak.v6.detail'); },
+        task: 'IPv6', fixable: true
+      },
+      {
+        code: 'DNS', title: function () { return t('leak.dns.title'); }, status: dnsStatus,
+        value: dnsValue,
+        detail: function () { return t('leak.dns.detail'); },
+        task: 'DNS', fixable: dnsStatus !== 'ok'
+      }
+    ];
+
+    /* 本地检查服务：TUN 折算为独立信号 */
+    const tunData = await tunPromise;
+    let tunStatus = 'info', tunSim = 0;
+    let tunValue = function () { return t('card.tun.noData'); };
+    let tunDetail = function () { return t('card.tun.unavailable'); };
+    if (tunData && Array.isArray(tunData.results)) {
+      const results = tunData.results;
+      const failed = results.filter(function (r) { return !r || !r.ok; });
+      const failCount = typeof tunData.fail === 'number' ? tunData.fail : failed.length;
+      const okCount = Math.max(0, results.length - failed.length);
+      tunValue = function () { return t('card.tun.value', { ok: okCount, total: results.length }); };
+      if (failCount <= 0) {
+        tunStatus = 'ok';
+        tunSim = 0;
+        tunDetail = function () { return t('card.tun.pass'); };
+      } else {
+        tunStatus = failCount >= 3 ? 'bad' : 'warn';
+        tunSim = failCount >= 3 ? 1 : 0.5;
+        tunDetail = function () {
+          const names = failed.slice(0, 3).map(function (r, i) {
+            return (r && (r.name || r.label || r.title || r.code || r.id)) || ('#' + (i + 1));
+          }).join(LANG === 'zh' ? '、' : ', ');
+          return t('card.tun.failDetail', { names: esc(names) });
+        };
+      }
+    }
+    cards.push(makeCard({
+      code: 'TUN', title: function () { return t('card.tun.title'); }, value: tunValue,
+      detail: tunDetail, status: tunStatus, weight: 6, sim: tunSim
+    }));
+
+    const WEIGHTS_SUM = cards.reduce(function (sum, c) { return sum + c.weight; }, 0);
+    console.assert(WEIGHTS_SUM === 100, 'weights must sum to 100');
+
+    return { cards: cards, ip: ipData, ipv6: ipv6, dnsInfo: dnsInfo, leaks: leaks,
+             langs: langs, tz: tz, intl: intlLocale,
+             fonts: { zh: zhFonts, vendor: vendorFonts, latin: latinFonts }, canvas: canvas,
+             audio: audio, gl: gl, emoji: emoji, rtc: rtc, tun: tunData };
+  }
+
+  /* ---------- 渲染 ---------- */
+  const CARD_JUMP = { TZ: 'TZ', OFF: 'TZ', RTC: 'RTC', V6: 'V6', DNS: 'DNS' };
+  const CARD_NOTE = { IP: 1, LANG: 1, INTL: 1, FONT: 1, EMOJI: 1 };
+
+  function cardHTML(c) {
+    const title = cardText(c.title);
+    const detail = cardText(c.detail);
+    const value = cardText(c.value);
+    let action = '';
+    if (c.status !== 'ok') {
+      if (CARD_JUMP[c.code]) {
+        const label = (c.code === 'RTC' || c.code === 'V6' || c.code === 'DNS')
+          ? t('action.fix') : t('action.settings');
+        action = '<div class="card-action"><button class="card-fix" data-jump="' + CARD_JUMP[c.code] + '">' + label + '</button></div>';
+      } else if (CARD_NOTE[c.code]) {
+        action = '<div class="card-action"><button class="card-fix" data-note="' + esc(c.code) + '">' + t('action.note') + '</button></div>';
+      }
+    }
+    return '' +
+      '<article class="card ' + c.status + '">' +
+        '<div class="badge">' + esc(c.code) + '</div>' +
+        '<div class="cbody">' +
+          '<div class="ctitle">' + esc(title) +
+            '<span class="chip ' + c.status + '">' + t('status.' + c.status) + '</span>' +
+          '</div>' +
+          '<div class="cvalue">' + value + '</div>' +
+          '<div class="cdetail">' + esc(detail) + '</div>' +
+          c.extra +
+          action +
+        '</div>' +
+        '<div class="cmeta"><span class="w">w:' + c.weight + '</span><span class="dot"></span></div>' +
+      '</article>';
+  }
+
+  function renderCards(cards) {
+    $('cards').innerHTML = cards.map(cardHTML).join('');
+  }
+
+  function setScoreLive(v) {
+    const ring = $('ring');
+    const num = $('scoreNum');
+    if (num) num.textContent = v;
+    if (ring) ring.style.setProperty('--pct', v);
+  }
+
+  /* 逐条同步卡片，分数随每条信号结算递增 */
+  function revealCards(cards) {
+    const wrap = $('cards');
+    wrap.innerHTML = '';
+    wrap.classList.remove('loading');
+    return new Promise(function (resolve) {
+      let i = 0;
+      let acc = 0;
+      (function next() {
+        if (i >= cards.length) { resolve(); return; }
+        const c = cards[i++];
+        wrap.insertAdjacentHTML('beforeend', cardHTML(c));
+        acc += Math.round((c.sim || 0) * c.weight);
+        setScoreLive(acc);
+        const badge = $('mascotBadge');
+        if (badge) badge.textContent = i + '/' + cards.length;
+        $('sumDesc').textContent = t('summary.syncing', { done: i, total: cards.length });
+        setTimeout(next, 120);
+      })();
+    });
+  }
+
+  /* 风险分：Σ round(sim × weight)，越高越差 */
+  function computeScore(cards) {
+    let total = 0;
+    cards.forEach(function (c) {
+      total += Math.round((c.sim || 0) * c.weight);
+    });
+    return Math.max(0, Math.min(100, Math.round(total)));
+  }
+
+  function setHeroState(state) {
+    const hero = $('hero');
+    if (!hero) return;
+    hero.dataset.tier = state === 'detecting' ? '' : state;
+    document.documentElement.dataset.tier = state === 'detecting' ? '' : state;
+    const badge = $('mascotBadge');
+    const cap = $('mascotCaption');
+    const icon = $('verdictIcon');
+    const pill = $('riskPill');
+    if (badge) badge.textContent = t('hero.badge.' + state);
+    if (cap) cap.textContent = t('hero.caption.' + state);
+    if (icon) icon.textContent = state === 'low' ? '✓' : state === 'mid' ? '!' : state === 'high' ? '✕' : '·';
+    if (pill) pill.textContent = t(state === 'detecting' ? 'tier.detecting' : 'tier.' + state + '.label');
+  }
+
+  /* 中国用户特征占比：时区/语言/字体/Intl/出口地区加权 */
+  function computeChinaPct(result) {
+    if (!result) return 0;
+    let pct = 0;
+    const tzName = String(result.tz || '').toLowerCase();
+    if (CN_TZ_NAMES.some(function (n) { return n.toLowerCase() === tzName; })) pct += 35;
+    else if (-new Date().getTimezoneOffset() === 480) pct += 15;
+    const primary = (result.langs || []).map(function (l) { return String(l).split('-')[0].toLowerCase(); });
+    if (primary.indexOf('zh') !== -1) pct += 25;
+    if (result.fonts && result.fonts.zh && result.fonts.zh.length) pct += 15;
+    if (/^zh/i.test(String(result.intl || ''))) pct += 10;
+    if (result.ip && String(result.ip.country || '').toUpperCase() === 'CN') pct += 25;
+    return Math.max(0, Math.min(100, pct));
+  }
+
+  function renderChina(result) {
+    const text = $('heroChinaText');
+    const pctEl = $('chinaPct');
+    const bar = $('chinaBar');
+    if (!text || !pctEl) return;
+    const pct = computeChinaPct(result);
+    const level = pct >= 70 ? 'high' : pct >= 35 ? 'mid' : 'low';
+    text.textContent = t('china.' + level);
+    pctEl.textContent = pct + '%';
+    if (bar) bar.style.width = pct + '%';
+  }
+
+  function animateScore(ring, target) {
+    const num = $('scoreNum');
+    if (!num) return;
+    const from = parseInt(num.textContent, 10) || 0;
+    if (from === target) return;
+    const t0 = performance.now();
+    const dur = 750;
+    (function step(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const v = Math.round(from + (target - from) * (1 - Math.pow(1 - p, 3)));
+      num.textContent = v;
+      ring.style.setProperty('--pct', v);
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function renderSummary(score, result) {
+    const ring = $('ring');
+    const tier = score <= 30 ? 'low' : score <= 60 ? 'mid' : 'high';
+    const color = tier === 'low' ? 'var(--ok)' : tier === 'mid' ? 'var(--warn)' : 'var(--bad)';
+    ring.style.setProperty('--ring-color', color);
+    $('scoreUnit').textContent = t('score.unit');
+    setHeroState(tier);
+    renderChina(result);
+    $('sumTitle').textContent = t('tier.' + tier + '.title');
+    $('sumDesc').textContent = t('tier.' + tier + '.desc');
+    animateScore(ring, score);
+  }
+
+  function renderAdvice(cards) {
+    const list = $('adviceList');
+    const items = cards.filter(c => c.advice && c.status !== 'ok');
+    if (!items.length) {
+      list.innerHTML = '<li><span class="lv ok">' + t('advice.lv.ok') + '</span><span>' +
+        esc(t('advice.ok')) + '</span></li>';
+      return;
+    }
+    list.innerHTML = items.map(c =>
+      '<li><span class="lv ' + (c.status === 'bad' ? 'bad' : 'warn') + '">' +
+        (c.status === 'bad' ? t('advice.lv.bad') : t('advice.lv.warn')) + '</span><span>' +
+        esc(cardText(c.advice)) + '</span></li>'
+    ).join('') +
+    '<li><span class="lv ok">' + t('advice.lv.ok') + '</span><span>' + esc(t('advice.principle')) + '</span></li>';
+  }
+
+  /* ---------- 修复脚本生成（下载后由用户以管理员身份运行） ---------- */
+  function psAdminBlock() {
+    return [
+      'if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {',
+      '  Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""',
+      '  exit',
+      '}'
+    ];
+  }
+
+  function buildFixScript(task) {
+    const lines = [
+      '# 隐私泄漏修复脚本（会自动请求管理员权限）',
+      '$ErrorActionPreference = "Stop"'
+    ].concat(psAdminBlock()).concat([
+      '',
+      'function Repair-WebRTC {',
+      '  $paths = @("HKLM:\\SOFTWARE\\Policies\\Google\\Chrome","HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge")',
+      '  foreach ($p in $paths) {',
+      '    if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null }',
+      '    New-ItemProperty -Path $p -Name "WebRtcIPHandlingPolicy" -Value "disable_non_proxied_udp" -PropertyType String -Force | Out-Null',
+      '    Write-Host "[OK] $p -> disable_non_proxied_udp" -ForegroundColor Green',
+      '  }',
+      '  Write-Host "请重启 Chrome / Edge 生效；Firefox 请在 about:config 关闭 media.peerconnection.enabled" -ForegroundColor Yellow',
+      '  foreach ($exe in @("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe","C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe")) {',
+      '    if (Test-Path $exe) {',
+      '      $n = "BlockWebRTC-UDP-" + [IO.Path]::GetFileNameWithoutExtension($exe)',
+      '      Remove-NetFirewallRule -DisplayName $n -ErrorAction SilentlyContinue',
+      '      New-NetFirewallRule -DisplayName $n -Direction Outbound -Program $exe -Protocol UDP -Action Block -Profile Any | Out-Null',
+      '      Write-Host "[OK] 防火墙已阻断浏览器 UDP: $exe" -ForegroundColor Green',
+      '    }',
+      '  }',
+      '}',
+      '',
+      'function Repair-IPv6 {',
+      '  Get-NetAdapterBinding -ComponentID ms_tcpip6 | Where-Object { $_.Enabled } | ForEach-Object {',
+      '    try { Disable-NetAdapterBinding -Name $_.Name -ComponentID ms_tcpip6 -ErrorAction Stop; Write-Host "[OK] 已关闭 IPv6: $($_.Name)" -ForegroundColor Green }',
+      '    catch { Write-Host "[FAIL] $($_.Name): $($_.Exception.Message)" -ForegroundColor Red }',
+      '  }',
+      '}',
+      '',
+      'function Repair-DNS {',
+      '  $idx = (Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1).ifIndex',
+      '  if (-not $idx) { Write-Host "[FAIL] 未找到已连接网卡" -ForegroundColor Red; return }',
+      '  try {',
+      '    netsh dns add encryption server=1.1.1.1 dohtemplate=https://cloudflare-dns.com/dns-query autoupgrade=yes | Out-Null',
+      '    netsh dns add encryption server=1.0.0.1 dohtemplate=https://cloudflare-dns.com/dns-query autoupgrade=yes | Out-Null',
+      '  } catch {}',
+      '  Set-DnsClientServerAddress -InterfaceIndex $idx -ServerAddresses 1.1.1.1,1.0.0.1',
+      '  Write-Host "[OK] 已设置 Cloudflare DoH（ifIndex=$idx）" -ForegroundColor Green',
+      '}',
+      '',
+      '$task = "' + task + '"',
+      'if ($task -eq "All") { Repair-WebRTC; Repair-IPv6; Repair-DNS }',
+      'elseif ($task -eq "WebRTC") { Repair-WebRTC }',
+      'elseif ($task -eq "IPv6") { Repair-IPv6 }',
+      'elseif ($task -eq "DNS") { Repair-DNS }',
+      'Write-Host ""',
+      'Read-Host "按回车退出" | Out-Null'
+    ]);
+    return lines.join('\r\n');
+  }
+
+  function buildRestoreScript(task) {
+    const lines = [
+      '# 隐私配置还原脚本（会自动请求管理员权限）',
+      '$ErrorActionPreference = "SilentlyContinue"'
+    ].concat(psAdminBlock()).concat([
+      '',
+      'function Restore-WebRTC {',
+      '  foreach ($p in @("HKLM:\\SOFTWARE\\Policies\\Google\\Chrome","HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge")) {',
+      '    if (Test-Path $p) {',
+      '      Remove-ItemProperty -Path $p -Name "WebRtcIPHandlingPolicy" -ErrorAction SilentlyContinue',
+      '      Write-Host "[OK] 已移除 $p 的 WebRTC 策略" -ForegroundColor Green',
+      '    }',
+      '  }',
+      '  foreach ($n in @("BlockWebRTC-UDP-chrome","BlockWebRTC-UDP-msedge")) {',
+      '    if (Get-NetFirewallRule -DisplayName $n -ErrorAction SilentlyContinue) {',
+      '      Remove-NetFirewallRule -DisplayName $n',
+      '      Write-Host "[OK] 已移除防火墙规则 $n" -ForegroundColor Green',
+      '    }',
+      '  }',
+      '}',
+      '',
+      'function Restore-IPv6 {',
+      '  Get-NetAdapterBinding -ComponentID ms_tcpip6 | Where-Object { -not $_.Enabled } | ForEach-Object {',
+      '    try { Enable-NetAdapterBinding -Name $_.Name -ComponentID ms_tcpip6 -ErrorAction Stop; Write-Host "[OK] 已恢复 IPv6: $($_.Name)" -ForegroundColor Green } catch {}',
+      '  }',
+      '}',
+      '',
+      'function Restore-DNS {',
+      '  $idx = (Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1).ifIndex',
+      '  if ($idx) { Set-DnsClientServerAddress -InterfaceIndex $idx -ResetServerAddresses; Write-Host "[OK] DNS 已恢复自动获取" -ForegroundColor Green }',
+      '}',
+      '',
+      '$task = "' + task + '"',
+      'if ($task -eq "All") { Restore-WebRTC; Restore-IPv6; Restore-DNS }',
+      'elseif ($task -eq "WebRTC") { Restore-WebRTC }',
+      'elseif ($task -eq "IPv6") { Restore-IPv6 }',
+      'elseif ($task -eq "DNS") { Restore-DNS }',
+      'Write-Host ""',
+      'Read-Host "按回车退出" | Out-Null'
+    ]);
+    return lines.join('\r\n');
+  }
+
+  function buildTunCheckScript() {
+    const s = String.raw`# TUN 隧道检查（只读，不修改任何配置）
+$ErrorActionPreference = 'SilentlyContinue'
+$script:fail = 0
+
+function Report($label, $ok, $detail) {
+  if ($ok) {
+    Write-Host "[PASS] $label" -ForegroundColor Green
+  } else {
+    Write-Host "[FAIL] $label" -ForegroundColor Red
+    $script:fail++
+  }
+  if ($detail) { Write-Host "       $detail" -ForegroundColor DarkGray }
+}
+
+function TestPort($port) {
+  $client = New-Object Net.Sockets.TcpClient
+  try {
+    $task = $client.ConnectAsync('127.0.0.1', $port)
+    return $task.Wait(800)
+  } catch {
+    return $false
+  } finally {
+    $client.Close()
+  }
+}
+
+Write-Host '=== TUN 隧道状态检查 ===' -ForegroundColor Cyan
+Write-Host ''
+
+$v2 = Get-Process v2rayN -ErrorAction SilentlyContinue | Select-Object -First 1
+$v2Detail = '未运行：请先启动 v2rayN'
+if ($v2) { $v2Detail = "PID $($v2.Id)" }
+Report 'v2rayN 进程' ($null -ne $v2) $v2Detail
+
+$sb = Get-Process sing-box -ErrorAction SilentlyContinue | Select-Object -First 1
+$sbDetail = '未运行：TUN 模式没有启动'
+if ($sb) { $sbDetail = "PID $($sb.Id)" }
+Report 'sing-box 进程' ($null -ne $sb) $sbDetail
+
+$adapters = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.InterfaceDescription -match 'sing-box|sing-tun|wintun|WinTun' -or $_.Name -match 'sing-box|singbox|tun' })
+$tun = $adapters | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+$tunDetail = '未找到 sing-box / wintun 虚拟网卡'
+if ($tun) { $tunDetail = "$($tun.Name) / $($tun.InterfaceDescription) / Up" }
+elseif ($adapters.Count -gt 0) { $tunDetail = "网卡存在但未启用: $($adapters.Name -join ', ')" }
+Report 'TUN 虚拟网卡' ($null -ne $tun) $tunDetail
+
+$route = Find-NetRoute -RemoteIPAddress '1.1.1.1' -ErrorAction SilentlyContinue | Select-Object -First 1
+$viaTun = $false
+$routeDetail = '无法获取默认路由'
+if ($route) {
+  $routeDetail = "去 1.1.1.1 走 $($route.InterfaceAlias) / $($route.NextHop)"
+  if ($tun -and $route.InterfaceAlias -eq $tun.Name) { $viaTun = $true }
+}
+Report '流量走 TUN 隧道' $viaTun $routeDetail
+
+$elevated = $false
+if ($v2) {
+  try {
+    Add-Type -Namespace TunCheck -Name Native -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+[DllImport("advapi32.dll", SetLastError=true)] public static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+[DllImport("advapi32.dll", SetLastError=true)] public static extern bool GetTokenInformation(IntPtr token, int cls, out int info, int len, out int ret);
+[DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);
+'@
+    $h = [TunCheck.Native]::OpenProcess(0x1000, $false, $v2.Id)
+    $tok = [IntPtr]::Zero
+    [void][TunCheck.Native]::OpenProcessToken($h, 0x0008, [ref]$tok)
+    $val = 0
+    $ret = 0
+    [void][TunCheck.Native]::GetTokenInformation($tok, 20, [ref]$val, 4, [ref]$ret)
+    $elevated = ($val -ne 0)
+    [void][TunCheck.Native]::CloseHandle($tok)
+    [void][TunCheck.Native]::CloseHandle($h)
+  } catch { }
+}
+$elevDetail = '未提权：TUN 会启动失败，请右键“以管理员身份运行”'
+if ($elevated) { $elevDetail = '已提权，可创建 TUN' }
+Report 'v2rayN 管理员权限' $elevated $elevDetail
+
+$tunOk = ($null -ne $sb) -and ($null -ne $tun) -and $viaTun
+$p1081 = TestPort 1081
+$p1080 = TestPort 1080
+if ($tunOk) {
+  $d1 = '未监听（TUN 模式下正常）'
+  if ($p1081) { $d1 = '监听中' }
+  Write-Host "[INFO] 本地代理端口 1081: $d1" -ForegroundColor DarkGray
+  $d0 = '未监听（TUN 模式下正常）'
+  if ($p1080) { $d0 = '监听中' }
+  Write-Host "[INFO] 本地代理端口 1080: $d0" -ForegroundColor DarkGray
+} else {
+  Report '兜底代理端口 1081' $p1081 'TUN 异常时需要系统代理通道'
+  Report 'SOCKS 端口 1080' $p1080 ''
+}
+
+$sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+$proxyOff = -not [bool]$sp.ProxyEnable
+$spDetail = '系统代理已关闭（TUN 模式下应为关闭）'
+if (-not $proxyOff) { $spDetail = "系统代理开启: $($sp.ProxyServer)（TUN 模式下建议关闭）" }
+Report '系统代理已关闭' $proxyOff $spDetail
+
+$exitIp = $null
+$exitOrg = ''
+$exitDetail = '无法访问外网（已尝试 3 个接口）'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+foreach ($u in @('https://api.ipify.org?format=json','https://ifconfig.me/ip','https://ipapi.co/json')) {
+  if ($exitIp) { break }
+  try {
+    $info = Invoke-RestMethod $u -TimeoutSec 8
+    if ($info -is [string]) { $exitIp = $info.Trim() }
+    elseif ($info.ip) {
+      $exitIp = $info.ip
+      if ($info.country_name) { $exitOrg = " / $($info.country_name) / $($info.org)" }
+    }
+  } catch { }
+}
+if ($exitIp) { $exitDetail = "出口 $exitIp$exitOrg" }
+Report '网络出口可用' ($null -ne $exitIp) $exitDetail
+
+Write-Host ''
+if ($script:fail -eq 0) {
+  Write-Host '结论: TUN 工作正常，流量已走 sing-box 隧道。' -ForegroundColor Green
+} else {
+  Write-Host "结论: 发现 $script:fail 项异常。可运行 tun-fallback.ps1 切回系统代理。" -ForegroundColor Yellow
+}
+Read-Host '按回车退出' | Out-Null
+`;
+    return s.split('\n').join('\r\n');
+  }
+
+  function buildTunFallbackScript() {
+    const s = String.raw`# TUN 故障兜底：TUN 正常则不做任何修改，异常时切回系统代理
+$ErrorActionPreference = 'SilentlyContinue'
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+function TestPort($port) {
+  $client = New-Object Net.Sockets.TcpClient
+  try {
+    $task = $client.ConnectAsync('127.0.0.1', $port)
+    return $task.Wait(800)
+  } catch {
+    return $false
+  } finally {
+    $client.Close()
+  }
+}
+
+function FindV2rayN {
+  $p = Get-Process v2rayN -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($p -and $p.Path) { return $p.Path }
+  $hit = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter 'v2rayN.exe' -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($hit) { return $hit.FullName }
+  return $null
+}
+
+Write-Host '=== TUN 故障兜底 ===' -ForegroundColor Cyan
+Write-Host ''
+
+$v2 = Get-Process v2rayN -ErrorAction SilentlyContinue | Select-Object -First 1
+$sb = Get-Process sing-box -ErrorAction SilentlyContinue | Select-Object -First 1
+$tun = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { ($_.InterfaceDescription -match 'sing-box|sing-tun|wintun|WinTun' -or $_.Name -match 'sing-box|singbox|tun') -and $_.Status -eq 'Up' } | Select-Object -First 1
+$route = Find-NetRoute -RemoteIPAddress '1.1.1.1' -ErrorAction SilentlyContinue | Select-Object -First 1
+$viaTun = $false
+if ($route -and $tun -and $route.InterfaceAlias -eq $tun.Name) { $viaTun = $true }
+
+$healthy = ($null -ne $v2) -and ($null -ne $sb) -and ($null -ne $tun) -and $viaTun
+Write-Host "v2rayN=$([bool]$v2)  sing-box=$([bool]$sb)  TUN网卡=$([bool]$tun)  路由走TUN=$viaTun" -ForegroundColor DarkGray
+Write-Host ''
+
+if ($healthy) {
+  Write-Host 'TUN 工作正常，无需恢复系统代理，未做任何修改。' -ForegroundColor Green
+  Read-Host '按回车退出' | Out-Null
+  exit 0
+}
+
+Write-Host '检测到 TUN 异常，开始切回系统代理...' -ForegroundColor Yellow
+
+if (-not $isAdmin) {
+  Write-Host '切换代理模式需要管理员权限，正在提权...' -ForegroundColor Yellow
+  Start-Process powershell.exe -Verb RunAs -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File', $PSCommandPath)
+  exit
+}
+
+$exe = FindV2rayN
+if (-not $exe) {
+  Write-Host '未找到 v2rayN.exe，无法自动恢复。' -ForegroundColor Red
+  Write-Host '请手动把系统代理设为 127.0.0.1:1081。' -ForegroundColor Yellow
+  Read-Host '按回车退出' | Out-Null
+  exit 1
+}
+$cfg = Join-Path (Split-Path $exe -Parent) 'guiConfigs\guiNConfig.json'
+
+# 先停止运行中的实例，避免它退出时把旧配置写回
+Get-Process v2rayN -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 2
+Get-Process sing-box -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 1
+
+if (Test-Path $cfg) {
+  Copy-Item $cfg "$cfg.bak-fallback" -Force
+  try {
+    $j = Get-Content $cfg -Raw | ConvertFrom-Json
+    if ($j.tunModeItem) { $j.tunModeItem.enableTun = $false }
+    $j.sysProxyType = 1
+    $j | ConvertTo-Json -Depth 20 | Set-Content $cfg -Encoding UTF8
+    Write-Host '配置已更新: enableTun=false, sysProxyType=1' -ForegroundColor Green
+  } catch {
+    Write-Host "配置写入失败: $($_.Exception.Message)" -ForegroundColor Red
+  }
+}
+
+Start-Process $exe
+Start-Sleep -Seconds 6
+
+$sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+$proxyPort = 1081
+if ($sp.ProxyServer -match ':(\d+)') { $proxyPort = [int]$Matches[1] }
+
+$portOk = $false
+for ($i = 0; $i -lt 15; $i++) {
+  if (TestPort $proxyPort) { $portOk = $true; break }
+  Start-Sleep -Seconds 1
+}
+
+$sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+$proxyOn = [bool]$sp.ProxyEnable
+if (-not $proxyOn) {
+  Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyEnable -Value 1
+  Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyServer -Value "127.0.0.1:$proxyPort"
+  $sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+  $proxyOn = [bool]$sp.ProxyEnable
+}
+
+$exitIp = $null
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+foreach ($u in @('https://api.ipify.org?format=json','https://ifconfig.me/ip','https://ipapi.co/json')) {
+  if ($exitIp) { break }
+  try {
+    $info = Invoke-RestMethod $u -TimeoutSec 8
+    if ($info -is [string]) { $exitIp = $info.Trim() }
+    elseif ($info.ip) { $exitIp = $info.ip }
+  } catch { }
+}
+
+Write-Host ''
+if ($portOk) { Write-Host "[PASS] 本地代理端口 $proxyPort 已监听" -ForegroundColor Green } else { Write-Host "[FAIL] 端口 $proxyPort 未监听" -ForegroundColor Red }
+if ($proxyOn) { Write-Host "[PASS] 系统代理已开启: $($sp.ProxyServer)" -ForegroundColor Green } else { Write-Host '[FAIL] 系统代理未能开启' -ForegroundColor Red }
+if ($exitIp) { Write-Host "[PASS] 网络出口: $exitIp" -ForegroundColor Green } else { Write-Host '[FAIL] 出口仍不可用，请检查节点或订阅' -ForegroundColor Red }
+
+Write-Host ''
+if ($portOk -and $proxyOn -and $exitIp) {
+  Write-Host '结论: 已切回系统代理模式，可正常上网。TUN 问题修复后再手动开启。' -ForegroundColor Green
+} else {
+  Write-Host '结论: 自动恢复未完全成功，请检查 v2rayN 界面与节点状态。' -ForegroundColor Yellow
+}
+Read-Host '按回车退出' | Out-Null
+`;
+    return s.split('\n').join('\r\n');
+  }
+
+  const TUN_AGENT = 'http://127.0.0.1:8788';
+  let lastAgentState = { ok: false, time: null, kind: 'updated' };
+  let lastTunData = null;
+  let lastTzData = null;
+  let lastTzOffline = false;
+
+  function tunEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m];
+    });
+  }
+
+  function setAgentState(ok, time, kind) {
+    lastAgentState = { ok: !!ok, time: time || null, kind: kind || 'updated' };
+    updateAgentStateText();
+  }
+
+  function updateAgentStateText() {
+    const el = $('tunAgentState');
+    if (!el) return;
+    if (lastAgentState.ok) {
+      let s = t('tun.agent.connected');
+      if (lastAgentState.time) {
+        const key = lastAgentState.kind === 'afterFix' ? 'tun.updatedAfterFix' : 'tun.updatedAt';
+        s += ' · ' + t(key, { time: tunEsc(lastAgentState.time) });
+      }
+      el.innerHTML = s;
+    } else {
+      el.innerHTML = t('tun.agent.stopped');
+    }
+  }
+
+  async function fetchTunCheck() {
+    try {
+      const c = new AbortController();
+      const timer = setTimeout(function () { c.abort(); }, 3000);
+      const r = await fetch(TUN_AGENT + '/check', { cache: 'no-store', signal: c.signal });
+      clearTimeout(timer);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function pingTunAgent() {
+    try {
+      const c = new AbortController();
+      const timer = setTimeout(() => c.abort(), 1500);
+      const r = await fetch(TUN_AGENT + '/health', { cache: 'no-store', signal: c.signal });
+      clearTimeout(timer);
+      setAgentState(r.ok);
+    } catch (e) {
+      setAgentState(false);
+    }
+  }
+
+  async function runTunCheck() {
+    const box = $('tunResult');
+    if (!box) return;
+    box.hidden = false;
+    box.innerHTML = '<div class="tun-line"><span class="chip info">' + t('btn.refreshing') + '</span><span class="tun-detail">' + t('tun.running') + '</span></div>';
+    const c = new AbortController();
+    const timer = setTimeout(() => c.abort(), 35000);
+    try {
+      const r = await fetch(TUN_AGENT + '/check', { cache: 'no-store', signal: c.signal });
+      const data = await r.json();
+      clearTimeout(timer);
+      renderTunResult(data);
+      setAgentState(true, data.time);
+    } catch (e) {
+      clearTimeout(timer);
+      box.innerHTML = '<div class="tun-line"><span class="chip bad">' + t('status.bad') + '</span><span class="tun-detail">' + t('tun.notConnected') + '</span></div>';
+      setAgentState(false);
+    }
+  }
+
+  function renderTunResult(data) {
+    const box = $('tunResult');
+    if (!box) return;
+    lastTunData = data;
+    const cls = { PASS: 'ok', FAIL: 'bad', INFO: 'info' };
+    let items = data.items;
+    if (!items && Array.isArray(data.results)) {
+      items = data.results.map(function (r) {
+        return {
+          status: r && r.ok ? 'PASS' : 'FAIL',
+          name: (r && (r.name || r.label || r.title || r.code)) || '',
+          detail: (r && r.detail) || ''
+        };
+      });
+    }
+    items = items || [];
+    const failCount = typeof data.fail === 'number'
+      ? data.fail
+      : items.filter(function (it) { return it.status === 'FAIL'; }).length;
+    const rows = items.map(function (it) {
+      return '<div class="tun-line"><span class="chip ' + (cls[it.status] || 'info') + '">' + tunEsc(it.status) + '</span>' +
+        '<span class="tun-name">' + tunEsc(it.name) + '</span>' +
+        '<span class="tun-detail">' + tunEsc(it.detail || '') + '</span></div>';
+    }).join('');
+    const color = failCount ? 'var(--warn)' : 'var(--ok)';
+    const conclusion = failCount ? t('tun.conclusion.fail', { n: failCount }) : t('tun.conclusion.ok');
+    box.innerHTML = rows + '<div class="tun-concl" style="color:' + color + '">' + tunEsc(conclusion) + '</div>';
+  }
+
+  function sleep(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
+  function showFixStage(msg, bad) {
+    const box = $('tunResult');
+    if (!box) return;
+    box.hidden = false;
+    box.innerHTML = '<div class="tun-line"><span class="chip ' + (bad ? 'bad' : 'info') + '">' +
+      (bad ? t('tun.fixFailed') : t('tun.fixing')) + '</span>' +
+      '<span class="tun-detail">' + tunEsc(msg) + '</span></div>';
+  }
+
+  async function runTunFix() {
+    const btn = $('btnTunFix');
+    if (btn && btn.disabled) return;
+    if (btn) { btn.disabled = true; btn.textContent = t('tun.fixing') + '…'; }
+    showFixStage(t('tun.askAdmin'));
+    try {
+      const r = await fetch(TUN_AGENT + '/fix', { cache: 'no-store' });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || 'unable to start');
+    } catch (e) {
+      showFixStage(t('tun.cannotStart', { msg: e.message }), true);
+      if (btn) { btn.disabled = false; btn.textContent = t('tun.btn.fix'); }
+      return;
+    }
+
+    const deadline = Date.now() + 130000;
+    let lastMsg = '';
+    let finished = false;
+    while (Date.now() < deadline) {
+      await sleep(1500);
+      let st = null;
+      try {
+        st = await fetch(TUN_AGENT + '/fix/status', { cache: 'no-store' }).then(function (x) { return x.json(); });
+      } catch (e) { }
+      if (st && st.message && st.message !== lastMsg) {
+        lastMsg = st.message;
+        showFixStage(st.message, st.stage === 'error');
+      }
+      if (st && (st.stage === 'done' || st.stage === 'error')) { finished = true; break; }
+    }
+
+    showFixStage(finished ? t('tun.rechecking') : t('tun.waitTimeout'));
+    const c = new AbortController();
+    const timer = setTimeout(function () { c.abort(); }, 45000);
+    try {
+      const r = await fetch(TUN_AGENT + '/check', { cache: 'no-store', signal: c.signal });
+      const data = await r.json();
+      clearTimeout(timer);
+      renderTunResult(data);
+      setAgentState(true, data.time, 'afterFix');
+      if (data.fail) showToast(t('toast.stillFail', { n: data.fail }));
+      else showToast(t('toast.allPass'));
+    } catch (e) {
+      clearTimeout(timer);
+      showFixStage(t('tun.cannotRead'), true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = t('tun.btn.fix'); }
+    }
+  }
+
+  function updateTzStateText() {
+    const el = $('tzCurrent');
+    const msg = $('tzMsg');
+    if (lastTzData) {
+      if (el) el.textContent = t('tz.value', {
+        display: lastTzData.display, id: lastTzData.id, offset: lastTzData.offset
+      });
+      if (msg) msg.innerHTML = t('tz.state.connected');
+    } else if (lastTzOffline) {
+      if (el) el.textContent = t('tz.state.needService');
+      if (msg) msg.innerHTML = t('tz.state.stopped');
+    } else {
+      if (el) el.textContent = t('tz.reading');
+      if (msg) msg.innerHTML = t('tz.state.detecting');
+    }
+  }
+
+  async function loadTz() {
+    try {
+      const r = await fetch(TUN_AGENT + '/tz', { cache: 'no-store' });
+      const d = await r.json();
+      lastTzData = d;
+      lastTzOffline = false;
+      updateTzStateText();
+    } catch (e) {
+      lastTzData = null;
+      lastTzOffline = true;
+      updateTzStateText();
+    }
+  }
+
+  async function applyTz(action) {
+    const msg = $('tzMsg');
+    const sel = $('tzSelect');
+    let url = TUN_AGENT + '/tz/restore';
+    if (action === 'set') url = TUN_AGENT + '/tz/set?id=' + encodeURIComponent(sel.value);
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || 'failed');
+      if (msg) msg.innerHTML = t('tz.state.modifyIssued');
+      setTimeout(loadTz, 3500);
+    } catch (e) {
+      if (msg) msg.innerHTML = '<span style="color:var(--bad)">' + t('tz.state.failed', { msg: tunEsc(e.message) }) + '</span>';
+    }
+  }
+
+  function flashEl(el) {
+    if (!el) return;
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+    setTimeout(function () { el.classList.remove('flash'); }, 2200);
+  }
+
+  function showToast(text) {
+    let el = $('toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'toast';
+      el.className = 'toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(el._timer);
+    el._timer = setTimeout(function () { el.classList.remove('show'); }, 3200);
+  }
+
+  function bindCardActions() {
+    const wrap = $('cards');
+    if (!wrap) return;
+    wrap.addEventListener('click', function (e) {
+      const noteBtn = e.target.closest ? e.target.closest('button[data-note]') : null;
+      if (noteBtn) {
+        showToast(t('note.' + noteBtn.getAttribute('data-note')));
+        return;
+      }
+      const btn = e.target.closest ? e.target.closest('button[data-jump]') : null;
+      if (!btn) return;
+      const jump = btn.getAttribute('data-jump');
+      if (jump === 'TZ') {
+        const panel = $('tzPanel');
+        if (panel) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          flashEl(panel);
+        }
+        return;
+      }
+      const row = document.querySelector('.leak-row[data-fixrow="' + jump + '"]');
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        flashEl(row);
+      }
+    });
+  }
+
+  function bindTunButtons() {
+    const b0 = $('btnTunRun');
+    const b1 = $('btnTunCheck');
+    const b2 = $('btnTunFallback');
+    const b3 = $('btnTunFix');
+    if (b0) b0.addEventListener('click', runTunCheck);
+    if (b3) b3.addEventListener('click', runTunFix);
+    const ta = $('btnTzApply');
+    const tr = $('btnTzRestore');
+    if (ta) ta.addEventListener('click', function () { applyTz('set'); });
+    if (tr) tr.addEventListener('click', function () { applyTz('restore'); });
+    if (b1) b1.addEventListener('click', function () {
+      downloadText('check-tun.ps1', buildTunCheckScript());
+      const old = this.textContent;
+      this.textContent = t('tun.btn.downloaded');
+      setTimeout(() => { this.textContent = old; }, 1800);
+    });
+    if (b2) b2.addEventListener('click', function () {
+      downloadText('tun-fallback.ps1', buildTunFallbackScript());
+      const old = this.textContent;
+      this.textContent = t('tun.btn.downloaded');
+      setTimeout(() => { this.textContent = old; }, 1800);
+    });
+  }
+  bindTunButtons();
+  bindCardActions();
+  pingTunAgent();
+  setInterval(pingTunAgent, 5000);
+  loadTz();
+
+  function downloadText(filename, text) {
+    const blob = new Blob(['\ufeff' + text], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function renderLeakPanel(leaks) {
+    const wrap = $('leakRows');
+    if (!wrap) return;
+    if (!leaks || !leaks.length) {
+      wrap.innerHTML = '<div class="empty">' + esc(t('leak.empty')) + '</div>';
+      return;
+    }
+    wrap.innerHTML = leaks.map(function (l) {
+      const label = l.status === 'ok' ? t('leak.btn.harden') : t('leak.btn.fix');
+      return '' +
+        '<div class="leak-row ' + l.status + '" data-fixrow="' + esc(l.task) + '">' +
+          '<div class="badge">' + esc(l.code) + '</div>' +
+          '<div class="cbody">' +
+            '<div class="ctitle">' + esc(cardText(l.title)) +
+              '<span class="chip ' + l.status + '">' + t('status.' + l.status) + '</span>' +
+            '</div>' +
+            '<div class="cvalue">' + esc(cardText(l.value)) + '</div>' +
+            '<div class="cdetail">' + esc(cardText(l.detail)) + '</div>' +
+          '</div>' +
+          '<div class="leak-actions">' +
+            '<button class="sm" data-task="' + esc(l.task) + '" data-mode="fix"' + (l.fixable ? '' : ' disabled') + '>' + label + '</button>' +
+            '<button class="sm ghost" data-task="' + esc(l.task) + '" data-mode="restore">' + t('leak.btn.restore') + '</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+
+    wrap.querySelectorAll('button[data-task]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const task = this.getAttribute('data-task');
+        const mode = this.getAttribute('data-mode');
+        if (mode === 'fix') downloadText('privacy-fix-' + task.toLowerCase() + '.ps1', buildFixScript(task));
+        else downloadText('privacy-restore-' + task.toLowerCase() + '.ps1', buildRestoreScript(task));
+        const old = this.textContent;
+        this.textContent = mode === 'fix' ? t('leak.downloaded') : t('leak.downloadedRestore');
+        setTimeout(() => { this.textContent = old; }, 1800);
+      });
+    });
+  }
+
+  function mountEmojiPreview() {
+    const preview = document.querySelector('.emoji-preview');
+    if (!preview || !lastResult || !lastResult.emoji || !lastResult.emoji.canvas) return;
+    const c = lastResult.emoji.canvas;
+    c.style.width = '36px'; c.style.height = '36px';
+    preview.innerHTML = '';
+    preview.appendChild(c);
+    const span = document.createElement('span');
+    span.className = 'cdetail';
+    span.textContent = t('emoji.previewNote');
+    preview.appendChild(span);
+  }
+
+  /* ---------- 报告 ---------- */
+  let lastResult = null;
+
+  function buildReport() {
+    if (!lastResult) return '';
+    const lines = [];
+    const label = function (c) {
+      return c.code === 'TUN' ? t('card.tun.title') : cardText(c.title);
+    };
+    lines.push(t('report.title'));
+    lines.push(t('report.time', { time: new Date().toLocaleString() }));
+    lines.push(t('report.score', { score: computeScore(lastResult.cards) }));
+    lines.push('');
+    lastResult.cards.forEach(function (c) {
+      const plain = String(cardText(c.value)).replace(/<[^>]+>/g, '');
+      lines.push('[' + t('status.' + c.status) + '] ' + label(c) + ' (w:' + c.weight + '): ' + plain);
+      const detail = cardText(c.detail);
+      if (detail) lines.push('    ' + detail);
+    });
+    lines.push('');
+    lines.push(t('report.leakHeader'));
+    (lastResult.leaks || []).forEach(function (l) {
+      lines.push('[' + t('status.' + l.status) + '] ' + cardText(l.title) + ': ' + cardText(l.value));
+    });
+    lines.push('');
+    lines.push(t('report.ip', {
+      value: lastResult.ip ? lastResult.ip.ip + ' / ' + lastResult.ip.country : t('report.na')
+    }));
+    lines.push(t('report.tz', {
+      value: lastResult.tz + ' (' + offsetLabel(-new Date().getTimezoneOffset()) + ')'
+    }));
+    lines.push(t('report.lang', { value: lastResult.langs.join(', ') }));
+    lines.push(t('report.fonts', {
+      value: lastResult.fonts.zh.concat(lastResult.fonts.vendor || []).join(', ') +
+             ' | ' + lastResult.fonts.latin.join(', ')
+    }));
+    lines.push(t('report.webgl', { value: lastResult.gl.renderer || t('report.na') }));
+    lines.push(t('report.canvas', {
+      canvas: lastResult.canvas.hash,
+      audio: lastResult.audio.hash
+    }));
+    return lines.join('\n');
+  }
+
+  async function refresh() {
+    const btn = $('btnRefresh');
+    btn.disabled = true;
+    btn.dataset.idleLabel = t('btn.refresh');
+    btn.textContent = t('btn.refreshing');
+    $('cards').classList.add('loading');
+    $('cards').innerHTML = '';
+    setScoreLive(0);
+    $('ring').style.setProperty('--ring-color', 'var(--info)');
+    $('chinaBar').style.width = '0';
+    $('chinaPct').textContent = '--%';
+    $('heroChinaText').textContent = t('china.detecting');
+    $('sumTitle').textContent = t('summary.detecting.title');
+    $('sumDesc').textContent = t('summary.detecting.desc');
+    setHeroState('detecting');
+    try {
+      lastResult = await runChecks();
+      const score = computeScore(lastResult.cards);
+      await revealCards(lastResult.cards);
+      renderSummary(score, lastResult);
+      renderAdvice(lastResult.cards);
+      renderLeakPanel(lastResult.leaks);
+      mountEmojiPreview();
+    } catch (e) {
+      console.error(e);
+      $('sumTitle').textContent = t('summary.failed.title');
+      $('sumDesc').textContent = t('summary.failed.desc', { msg: e.message });
+    } finally {
+      $('cards').classList.remove('loading');
+      btn.disabled = false;
+      btn.textContent = t('btn.refresh');
+    }
+  }
+
+  /* ---------- 语言切换 ---------- */
+  function detectLang() {
+    try {
+      const q = new URLSearchParams(location.search).get('lang');
+      if (q === 'zh' || q === 'en') return q;
+      const saved = localStorage.getItem(LANG_STORE_KEY);
+      if (saved === 'zh' || saved === 'en') return saved;
+    } catch (e) { }
+    return /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+  }
+
+  function applyStaticI18n() {
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+      el.innerHTML = t(el.getAttribute('data-i18n-html'));
+    });
+  }
+
+  function updateLangBtn() {
+    const btn = $('btnLang');
+    if (!btn) return;
+    btn.textContent = LANG === 'zh' ? 'EN' : '中文';
+    btn.title = LANG === 'zh' ? 'Switch to English' : 'Switch to Chinese';
+    btn.setAttribute('aria-label', btn.title);
+  }
+
+  function applyMetaI18n() {
+    const setMeta = function (sel, key) {
+      const el = document.querySelector(sel);
+      if (el) el.setAttribute('content', t(key));
+    };
+    setMeta('meta[name="description"]', 'doc.description');
+    setMeta('meta[name="keywords"]', 'doc.keywords');
+    setMeta('meta[property="og:title"]', 'og.title');
+    setMeta('meta[property="og:description"]', 'og.description');
+    setMeta('meta[property="og:locale"]', 'og.locale');
+    setMeta('meta[name="twitter:title"]', 'og.title');
+    setMeta('meta[name="twitter:description"]', 'og.description');
+  }
+
+  function setLang(lang, persist) {
+    if (lang !== 'zh' && lang !== 'en') return;
+    LANG = lang;
+    if (persist) {
+      try { localStorage.setItem(LANG_STORE_KEY, LANG); } catch (e) { }
+    }
+    document.documentElement.lang = LANG === 'zh' ? 'zh-CN' : 'en';
+    document.title = t('doc.title');
+    applyMetaI18n();
+    applyStaticI18n();
+    updateLangBtn();
+    updateAgentStateText();
+    updateTzStateText();
+    if (lastResult) {
+      renderCards(lastResult.cards);
+      renderSummary(computeScore(lastResult.cards), lastResult);
+      renderAdvice(lastResult.cards);
+      renderLeakPanel(lastResult.leaks);
+      mountEmojiPreview();
+    } else {
+      $('sumTitle').textContent = t('summary.detecting.title');
+      $('sumDesc').textContent = t('summary.detecting.desc');
+      setHeroState('detecting');
+    }
+    if (lastTunData) renderTunResult(lastTunData);
+  }
+
+  function applySiteUrl() {
+    try {
+      if (!/^https?:$/.test(location.protocol) || !location.origin) return;
+      const base = location.origin + '/';
+      document.querySelectorAll('[href*="__SITE_URL__"], [content*="__SITE_URL__"]').forEach(function (el) {
+        ['href', 'content'].forEach(function (attr) {
+          const v = el.getAttribute(attr);
+          if (v && v.indexOf('__SITE_URL__') !== -1) {
+            el.setAttribute(attr, v.replace(/__SITE_URL__\/?/, base));
+          }
+        });
+      });
+      document.querySelectorAll('script[type="application/ld+json"]').forEach(function (el) {
+        el.textContent = el.textContent.replace(/__SITE_URL__\/?/, base);
+      });
+    } catch (e) { }
+  }
+
+  $('btnLang').addEventListener('click', function () {
+    setLang(LANG === 'zh' ? 'en' : 'zh', true);
+  });
+
+  $('btnRefresh').addEventListener('click', refresh);
+  $('btnCopy').addEventListener('click', async function () {
+    const text = buildReport();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      this.textContent = t('btn.copyDone');
+      setTimeout(() => { this.textContent = t('btn.copy'); }, 1500);
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      this.textContent = t('btn.copyDone');
+      setTimeout(() => { this.textContent = t('btn.copy'); }, 1500);
+    }
+  });
+
+  LANG = detectLang();
+  document.documentElement.lang = LANG === 'zh' ? 'zh-CN' : 'en';
+  document.title = t('doc.title');
+  applyMetaI18n();
+  applySiteUrl();
+  applyStaticI18n();
+  updateLangBtn();
+  updateAgentStateText();
+  updateTzStateText();
+  $('sumTitle').textContent = t('summary.detecting.title');
+  $('sumDesc').textContent = t('summary.detecting.desc');
+
+  refresh();
+})();
+</script>
+</body>
+</html>
