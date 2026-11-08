@@ -1,7 +1,5 @@
 # 本机专用脚本，不随公开站点发布
 backup/
-privacy-fix.ps1
-privacy-restore.ps1
 remove-office-cn-fonts.ps1
 
 # 临时文件

@@ -261,6 +261,24 @@
   button.sm.ghost{background:transparent;color:var(--muted)}
   button.sm:disabled{opacity:.4;cursor:not-allowed}
   .leak-note{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
+  .os-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#0f1420;border:1px solid #1e2533;border-radius:12px;padding:9px 13px;margin:2px 0 10px}
+  .os-bar .os-title{font-size:12px;color:var(--muted);font-weight:600}
+  .os-seg{display:inline-flex;background:#0b0f16;border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px}
+  .os-seg button{background:transparent;border:0;color:var(--muted);font-size:12px;padding:5px 12px;border-radius:7px;cursor:pointer;font-family:inherit}
+  .os-seg button:hover{color:var(--txt)}
+  .os-seg button.active{background:rgba(99,102,241,.18);color:#c7d2fe;box-shadow:inset 0 0 0 1px rgba(99,102,241,.38)}
+  .os-hint{font-size:11.5px;color:var(--dim)}
+  .script-guide{margin:0 0 12px;border:1px solid var(--line);border-radius:12px;padding:11px 14px;background:linear-gradient(180deg,rgba(96,165,250,.06),rgba(15,20,32,.55))}
+  .script-guide .sg-head{font-size:12.5px;font-weight:650;color:var(--txt);margin-bottom:7px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .script-guide .sg-file{font-family:ui-monospace,Consolas,monospace;color:#93c5fd;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:6px;padding:1px 7px;text-decoration:none}
+  .script-guide .sg-file:hover{border-color:rgba(96,165,250,.6)}
+  .script-guide ol{margin:0 0 9px;padding-left:18px;color:var(--muted);font-size:12px;line-height:1.75}
+  .script-guide .sg-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:3px 16px;margin-bottom:8px}
+  .script-guide .sg-row{display:flex;align-items:baseline;gap:8px;font-size:11.5px;line-height:1.7;min-width:0}
+  .script-guide .sg-row span{flex:0 0 84px;color:var(--muted)}
+  .script-guide .sg-row code{font-family:ui-monospace,Consolas,monospace;color:#c2cad9;background:#0b0f16;border:1px solid #1c2330;border-radius:5px;padding:0 6px;overflow-wrap:anywhere;min-width:0}
+  .script-guide .sg-foot{font-size:11.5px;color:var(--dim)}
+  .tun-state code{font-family:ui-monospace,Consolas,monospace;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:5px;padding:0 5px;color:#93c5fd}
   footer{margin-top:26px;color:var(--dim);font-size:11.5px;line-height:1.8;text-align:center}
   .emoji-preview{display:flex;align-items:center;gap:10px;margin-top:8px}
   .emoji-preview canvas{background:#0b0f16;border:1px solid #222a3a;border-radius:8px}
@@ -423,11 +441,20 @@
 
   <section class="leak" id="privacyPanel">
     <h2 data-i18n="leak.title">隐私泄漏修复</h2>
+    <div class="os-bar">
+      <span class="os-title" data-i18n="os.label">当前系统</span>
+      <div class="os-seg" id="osSeg">
+        <button type="button" data-os="win">Windows</button>
+        <button type="button" data-os="linux">Ubuntu / Linux</button>
+      </div>
+      <span class="os-hint" data-i18n="os.hint">选择后，下方所有修复与检查都按该系统执行</span>
+    </div>
+    <div class="script-guide" id="scriptGuide"></div>
     <div id="leakRows"><div class="empty" data-i18n="leak.empty">检测完成后显示。</div></div>
     <div class="leak-note" data-i18n-html="leak.note">
-      浏览器无法直接修改系统设置：点击“修复此项”会下载一个 .ps1 脚本，右键选择“使用 PowerShell 运行”即可（脚本会自动请求管理员权限）。<br>
-      WebRTC 策略修改后需重启浏览器生效；IPv6 与 DNS 修改立即生效。页面只能检测行为结果，无法读取系统策略开关状态。<br>
-      若系统提示“禁止运行脚本”，请在 PowerShell 中执行：powershell -ExecutionPolicy Bypass -File .\privacy-fix.ps1
+      浏览器无法直接修改系统设置：点击“修复此项”会下载统一脚本 env-fix.bat（Ubuntu 为 env-fix.sh），所有修复与还原都在这一个文件里，只需下载一次。<br>
+      Windows：在该目录打开 PowerShell，运行 .\env-fix.bat fix webrtc；Ubuntu：chmod +x env-fix.sh && sudo ./env-fix.sh fix webrtc。<br>
+      WebRTC 策略修改后需重启浏览器生效；IPv6 与 DNS 修改立即生效。页面只能检测行为结果，无法读取系统策略开关状态。
     </div>
   </section>
 
@@ -444,7 +471,7 @@
         <div class="leak-actions">
           <button class="sm primary" id="btnTunFix" data-i18n="tun.btn.fix">一键修复</button>
           <button class="sm" id="btnTunRun" data-i18n="tun.btn.run">一键检查</button>
-          <button class="sm ghost" id="btnTunCheck" data-i18n="tun.btn.script">下载检查脚本</button>
+          <button class="sm ghost" id="btnTunCheck" data-i18n="tun.btn.script">下载脚本</button>
           <button class="sm ghost" id="btnTunFallback" data-i18n="tun.btn.fallback">故障兜底</button>
         </div>
       </div>
@@ -452,10 +479,10 @@
     <div id="tunAgentState" class="tun-state" data-i18n="tun.state.detecting">检查服务：检测中…</div>
     <div id="tunResult" class="tun-result" hidden></div>
     <div class="leak-note" data-i18n-html="tun.note">
-      「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，请从本站下载 start-tun-check.bat 与 tun-agent.ps1 放到同一目录后双击运行。<br>
-      「一键修复」会弹出 UAC 授权：自动关闭系统代理、在 v2rayN 配置中开启 TUN，并以管理员身份重启 v2rayN，修复后再自动复检；若 TUN 始终无法就绪，会切回系统代理保证联网。<br>
-      「下载检查脚本」可单独在 PowerShell 中运行；「故障兜底」仅在 TUN 异常时才切回系统代理，正常时不做任何修改。<br>
-      启动服务后也可直接访问 http://127.0.0.1:8788/ 使用页面。
+      「一键检查」「一键修复」与「时区」需要本机先运行本地服务：下载 env-fix.bat 后在该目录执行 env-fix.bat serve；Ubuntu 为 chmod +x env-fix.sh && ./env-fix.sh serve。<br>
+      「一键修复」会弹出系统授权：自动开启 TUN 并重启代理客户端，修复后自动复检；若 TUN 无法就绪会切回系统代理保证联网（Windows）；Linux 下会重启系统代理服务。<br>
+      「下载脚本」与「故障兜底」下载的是同一个统一脚本：前者运行 env-fix.bat check，后者运行 env-fix.bat tun-fallback。<br>
+      服务启动后也可直接访问 http://127.0.0.1:8788/ 使用页面。
     </div>
   </section>
 
@@ -470,15 +497,15 @@
       </div>
       <div class="leak-actions">
         <select id="tzSelect" class="tz-select">
-          <option value="China Standard Time">Asia/Shanghai (UTC+8)</option>
-          <option value="Tokyo Standard Time">Asia/Tokyo (UTC+9)</option>
-          <option value="Singapore Standard Time">Asia/Singapore (UTC+8)</option>
-          <option value="GMT Standard Time">Europe/London (UTC+0)</option>
-          <option value="W. Europe Standard Time">Europe/Berlin (UTC+1)</option>
-          <option value="Eastern Standard Time">America/New_York (UTC-5)</option>
-          <option value="Central Standard Time">America/Chicago (UTC-6)</option>
-          <option value="Mountain Standard Time">America/Denver (UTC-7)</option>
-          <option value="Pacific Standard Time">America/Los_Angeles (UTC-8)</option>
+          <option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</option>
+          <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+          <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
+          <option value="Europe/London">Europe/London (UTC+0)</option>
+          <option value="Europe/Berlin">Europe/Berlin (UTC+1)</option>
+          <option value="America/New_York">America/New_York (UTC-5)</option>
+          <option value="America/Chicago">America/Chicago (UTC-6)</option>
+          <option value="America/Denver">America/Denver (UTC-7)</option>
+          <option value="America/Los_Angeles">America/Los_Angeles (UTC-8)</option>
           <option value="UTC">UTC</option>
         </select>
         <button class="sm primary" id="btnTzApply" data-i18n="tz.btn.apply">应用</button>
@@ -595,40 +622,58 @@
       'advice.principle': '环境监听的核心是“一致性”而非单项是否合规：IP、时区、语言、字体、系统应构成一个自洽整体。只改其中一项往往制造出更明显的矛盾特征。',
       'advice.lv.ok': '良好', 'advice.lv.warn': '建议', 'advice.lv.bad': '冲突', 'advice.lv.tip': '提示',
       'leak.title': '隐私泄漏修复',
+      'os.label': '当前系统',
+      'os.hint': '选择后，下方所有修复与检查都按该系统执行',
+      'guide.title': '下载与运行',
+      'guide.step1': '下载 {file}（只需一次：修复、还原、TUN 检查与本地服务都在这个文件里）',
+      'guide.step2.win': '把文件放到任意目录，在该目录打开 PowerShell（Shift + 右键 → “在此处打开 PowerShell 窗口”）',
+      'guide.step2.linux': '在终端执行 chmod +x env-fix.sh 赋予执行权限',
+      'guide.step3': '按需执行下面的命令；修复/还原类命令会自动请求管理员权限（Windows 为 UAC，Ubuntu 为 sudo/polkit）',
+      'guide.menu': '也可以直接双击文件，进入交互菜单。',
+      'guide.downloaded': '已下载 {file} · 运行：{cmd}',
+      'guide.cmd.fix': '修复全部',
+      'guide.cmd.fixWebrtc': '修复 WebRTC',
+      'guide.cmd.fixIpv6': '修复 IPv6',
+      'guide.cmd.fixDns': '修复 DNS',
+      'guide.cmd.restore': '还原全部',
+      'guide.cmd.check': '检查 TUN',
+      'guide.cmd.tunFix': 'TUN 自动修复',
+      'guide.cmd.fallback': 'TUN 故障兜底',
+      'guide.cmd.serve': '启动本地服务',
       'leak.empty': '检测完成后显示。',
-      'leak.note': '浏览器无法直接修改系统设置：点击“修复此项”会下载一个 .ps1 脚本，右键选择“使用 PowerShell 运行”即可（脚本会自动请求管理员权限）。<br>WebRTC 策略修改后需重启浏览器生效；IPv6 与 DNS 修改立即生效。页面只能检测行为结果，无法读取系统策略开关状态。<br>若系统提示“禁止运行脚本”，请在 PowerShell 中执行：powershell -ExecutionPolicy Bypass -File .\\privacy-fix.ps1',
+      'leak.note': '浏览器无法直接修改系统设置：点击“修复此项”会下载统一脚本 env-fix.bat（Ubuntu 为 env-fix.sh），所有修复与还原都在这一个文件里，只需下载一次。<br>Windows：在该目录打开 PowerShell，运行 .\\env-fix.bat fix webrtc；Ubuntu：chmod +x env-fix.sh && sudo ./env-fix.sh fix webrtc。<br>WebRTC 策略修改后需重启浏览器生效；IPv6 与 DNS 修改立即生效。页面只能检测行为结果，无法读取系统策略开关状态。',
       'leak.btn.fix': '修复此项', 'leak.btn.harden': '加固', 'leak.btn.restore': '还原',
       'leak.downloaded': '已下载', 'leak.downloadedRestore': '已下载还原',
       'tun.section.title': 'TUN 隧道检查',
       'tun.static.title': '系统级检查（需运行本地脚本）',
       'tun.static.value': '浏览器无法读取进程、网卡和路由',
-      'tun.static.detail': '检查项：v2rayN / sing-box 进程、singbox_tun 网卡、默认路由是否走隧道、v2rayN 是否管理员运行、系统代理状态、1080/1081 端口、出口 IP。',
-      'tun.btn.fix': '一键修复', 'tun.btn.run': '一键检查', 'tun.btn.script': '下载检查脚本',
+      'tun.static.detail': '检查项：代理进程、TUN 虚拟网卡、默认路由是否走隧道、管理员权限（Windows）、系统代理状态、本地代理端口与出口 IP。',
+      'tun.btn.fix': '一键修复', 'tun.btn.run': '一键检查', 'tun.btn.script': '下载脚本',
       'tun.btn.fallback': '故障兜底', 'tun.btn.downloaded': '已下载',
       'tun.state.detecting': '检查服务：检测中…',
-      'tun.note': '「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，请下载 <a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> 与 <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a> 放到同一目录后双击运行。<br>「一键修复」会弹出 UAC 授权：自动关闭系统代理、在 v2rayN 配置中开启 TUN，并以管理员身份重启 v2rayN，修复后再自动复检；若 TUN 始终无法就绪，会切回系统代理保证联网。<br>「下载检查脚本」可单独在 PowerShell 中运行；「故障兜底」仅在 TUN 异常时才切回系统代理，正常时不做任何修改。<br>启动服务后也可直接访问 http://127.0.0.1:8788/ 使用页面。',
+      'tun.note': '「一键检查」「一键修复」与「时区」需要本机先运行本地服务：下载 env-fix.bat 后在该目录执行 env-fix.bat serve；Ubuntu 为 chmod +x env-fix.sh && ./env-fix.sh serve。<br>「一键修复」会弹出系统授权：自动开启 TUN 并重启代理客户端，修复后自动复检；若 TUN 无法就绪会切回系统代理保证联网（Windows）；Linux 下会重启系统代理服务。<br>「下载脚本」与「故障兜底」下载的是同一个统一脚本：前者运行 env-fix.bat check，后者运行 env-fix.bat tun-fallback。<br>服务启动后也可直接访问 http://127.0.0.1:8788/ 使用页面。',
       'tun.agent.connected': '检查服务：<span style="color:var(--ok)">已连接</span>',
-      'tun.agent.stopped': '检查服务：<span style="color:var(--bad)">未启动</span> · 需在本机运行检查服务：<a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> + <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a>（放同一目录后双击 bat）',
+      'tun.agent.stopped': '检查服务：<span style="color:var(--bad)">未启动</span> · 运行本地服务：下载 <a href="{file}" download style="color:var(--info)">{file}</a> 后执行 <code>{cmd}</code>',
       'tun.updatedAt': '更新于 {time}', 'tun.updatedAfterFix': '修复后更新于 {time}',
       'tun.running': '正在执行本地检查（最长约 30 秒）…',
-      'tun.notConnected': '检查服务未启动。请先在本机下载并运行 start-tun-check.bat（与 tun-agent.ps1 放同一目录）；服务启动后本页会自动重连，无需刷新。',
+      'tun.notConnected': '检查服务未启动。请下载 {file} 并运行 {cmd}；服务启动后本页会自动重连，无需刷新。',
       'tun.conclusion.ok': '结论：全部检查项通过。',
       'tun.conclusion.fail': '结论：发现 {n} 项异常。',
       'tun.fixing': '修复中', 'tun.fixFailed': '修复失败',
-      'tun.askAdmin': '正在请求管理员权限，请在 UAC 弹窗中点「是」…',
+      'tun.askAdmin': '正在请求系统授权，请在 UAC / polkit 窗口中确认…',
       'tun.cannotStart': '无法启动修复：{msg}（请确认本地检查服务已启动）',
       'tun.rechecking': '修复流程结束，正在重新检查（约 20 秒）…',
       'tun.waitTimeout': '等待超时，正在重新检查当前状态…',
       'tun.cannotRead': '修复后无法获取检查结果，请确认检查服务仍在运行。',
       'tz.section.title': '系统时区（通用设置）',
       'tz.card.title': '当前系统时区', 'tz.chip': '系统级', 'tz.reading': '读取中…',
-      'tz.card.detail': '修改需要管理员确认（UAC）。首次修改会保存原时区，之后可点「还原」恢复。',
+      'tz.card.detail': '修改需要系统授权。首次修改会保存原时区，之后可点「还原」恢复。',
       'tz.btn.apply': '应用', 'tz.btn.restore': '还原',
       'tz.state.detecting': '时区服务：检测中…',
-      'tz.state.connected': '时区服务：<span style="color:var(--ok)">已连接</span> · 修改需在 UAC 窗口确认',
+      'tz.state.connected': '时区服务：<span style="color:var(--ok)">已连接</span> · 修改需在系统授权窗口确认',
       'tz.state.needService': '需要本地检查服务',
       'tz.state.stopped': '时区服务：<span style="color:var(--bad)">未启动</span> · 需先运行本地检查服务再使用',
-      'tz.state.modifyIssued': '已发起修改，请在 UAC 窗口点「是」，稍后自动刷新…',
+      'tz.state.modifyIssued': '已发起修改，请在系统授权窗口中确认，稍后自动刷新…',
       'tz.state.failed': '未执行：{msg}',
       'tz.value': '{display}（{id}，UTC{offset}）',
       'footer.line1': '检测结果仅在本机浏览器内计算，不会上传任何数据；IP 归属地通过公共接口查询。<br>本工具用于环境自检与隐私排查，环境打分不构成任何平台行为的保证。',
@@ -797,40 +842,58 @@
       'advice.principle': 'Consistency matters more than any single check: IP, timezone, language, fonts and system should tell one coherent story. Changing only one item often creates a more obvious fingerprint.',
       'advice.lv.ok': 'Good', 'advice.lv.warn': 'Suggest', 'advice.lv.bad': 'Conflict', 'advice.lv.tip': 'Tip',
       'leak.title': 'Privacy Leak Remediation',
+      'os.label': 'Your system',
+      'os.hint': 'All fixes and checks below follow this choice',
+      'guide.title': 'Download & run',
+      'guide.step1': 'Download {file} once — fixes, restores, TUN checks and the local service all live in this single file',
+      'guide.step2.win': 'Put it in any folder and open PowerShell there (Shift + right-click → “Open PowerShell window here”)',
+      'guide.step2.linux': 'Make it executable in a terminal: chmod +x env-fix.sh',
+      'guide.step3': 'Run the commands you need; fix/restore commands request administrator rights automatically (UAC on Windows, sudo/polkit on Ubuntu)',
+      'guide.menu': 'You can also double-click the file to open the interactive menu.',
+      'guide.downloaded': 'Downloaded {file} · run: {cmd}',
+      'guide.cmd.fix': 'Fix all',
+      'guide.cmd.fixWebrtc': 'Fix WebRTC',
+      'guide.cmd.fixIpv6': 'Fix IPv6',
+      'guide.cmd.fixDns': 'Fix DNS',
+      'guide.cmd.restore': 'Restore all',
+      'guide.cmd.check': 'Check TUN',
+      'guide.cmd.tunFix': 'TUN auto-fix',
+      'guide.cmd.fallback': 'TUN fallback',
+      'guide.cmd.serve': 'Start local service',
       'leak.empty': 'Shown after the scan completes.',
-      'leak.note': 'The browser cannot change system settings directly. Clicking “Fix this” downloads a .ps1 script — right-click it and choose “Run with PowerShell” (it requests elevation automatically).<br>WebRTC policy changes take effect after restarting the browser; IPv6 and DNS changes apply immediately. This page can only observe behaviour, not the actual policy switches.<br>If script execution is blocked, run: powershell -ExecutionPolicy Bypass -File .\\privacy-fix.ps1',
+      'leak.note': 'The browser cannot change system settings directly. “Fix this” downloads the single script env-fix.bat (env-fix.sh on Ubuntu); every fix and restore lives in that one file, so you only download it once.<br>Windows: open PowerShell in that folder and run .\\env-fix.bat fix webrtc. Ubuntu: chmod +x env-fix.sh && sudo ./env-fix.sh fix webrtc.<br>WebRTC policy changes take effect after restarting the browser; IPv6 and DNS changes apply immediately. This page can only observe behaviour, not the actual policy switches.',
       'leak.btn.fix': 'Fix this', 'leak.btn.harden': 'Harden', 'leak.btn.restore': 'Restore',
       'leak.downloaded': 'Downloaded', 'leak.downloadedRestore': 'Restore downloaded',
       'tun.section.title': 'TUN Tunnel Check',
       'tun.static.title': 'System-level checks (local script required)',
       'tun.static.value': 'The browser cannot read processes, adapters or routes',
-      'tun.static.detail': 'Checks: v2rayN / sing-box processes, singbox_tun adapter, default route through the tunnel, v2rayN elevation, system proxy state, ports 1080/1081, and exit IP.',
-      'tun.btn.fix': 'Auto-fix', 'tun.btn.run': 'Run check', 'tun.btn.script': 'Download check script',
+      'tun.static.detail': 'Checks: proxy process, TUN adapter, default route through the tunnel, elevation (Windows), system proxy state, local proxy ports and exit IP.',
+      'tun.btn.fix': 'Auto-fix', 'tun.btn.run': 'Run check', 'tun.btn.script': 'Download script',
       'tun.btn.fallback': 'Fallback mode', 'tun.btn.downloaded': 'Downloaded',
       'tun.state.detecting': 'Check service: probing…',
-      'tun.note': '“Run check” displays results on this page. The local check service starts automatically at boot (windowless, read-only). If it shows as stopped, download <a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> and <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a>, keep them in one folder, then double-click the .bat.<br>“Auto-fix” triggers a UAC prompt: it disables the system proxy, enables TUN in the v2rayN config, restarts v2rayN elevated, and re-checks automatically. If TUN still cannot start, it falls back to the system proxy so you stay online.<br>“Download check script” can be run standalone in PowerShell. “Fallback mode” only switches to the system proxy when TUN is unhealthy and changes nothing otherwise.<br>Once the service is running you can also open http://127.0.0.1:8788/ directly.',
+      'tun.note': '“Run check”, “Auto-fix” and the time zone panel require the local service: download env-fix.bat and run env-fix.bat serve in that folder; on Ubuntu, chmod +x env-fix.sh && ./env-fix.sh serve.<br>“Auto-fix” triggers a system authorization prompt: it enables TUN and restarts the proxy client, then re-checks automatically. If TUN cannot start on Windows it falls back to the system proxy so you stay online; on Linux it restarts the proxy service.<br>“Download script” and “Fallback mode” download the same single script: the former runs env-fix.bat check, the latter runs env-fix.bat tun-fallback.<br>Once the service is running you can also open http://127.0.0.1:8788/ directly.',
       'tun.agent.connected': 'Check service: <span style="color:var(--ok)">connected</span>',
-      'tun.agent.stopped': 'Check service: <span style="color:var(--bad)">not running</span> · run the local service: download <a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> + <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a> into one folder, then double-click the .bat',
+      'tun.agent.stopped': 'Check service: <span style="color:var(--bad)">not running</span> · run the local service: download <a href="{file}" download style="color:var(--info)">{file}</a> and run <code>{cmd}</code>',
       'tun.updatedAt': 'updated at {time}', 'tun.updatedAfterFix': 'updated after fix at {time}',
       'tun.running': 'Running local checks (up to ~30 seconds)…',
-      'tun.notConnected': 'Check service is not running. Download start-tun-check.bat and tun-agent.ps1 from this page, run the .bat, and this page reconnects automatically.',
+      'tun.notConnected': 'Check service is not running. Download {file} and run {cmd}; this page reconnects automatically once the service starts.',
       'tun.conclusion.ok': 'Result: all checks passed.',
       'tun.conclusion.fail': 'Result: {n} check(s) failed.',
       'tun.fixing': 'Fixing', 'tun.fixFailed': 'Fix failed',
-      'tun.askAdmin': 'Requesting administrator rights — click “Yes” in the UAC prompt…',
+      'tun.askAdmin': 'Requesting system authorization — confirm in the UAC / polkit prompt…',
       'tun.cannotStart': 'Unable to start the fix: {msg} (make sure the local check service is running)',
       'tun.rechecking': 'Fix finished. Re-checking in about 20 seconds…',
       'tun.waitTimeout': 'Timed out while waiting. Re-checking the current state…',
       'tun.cannotRead': 'Could not retrieve results after the fix. Make sure the check service is still running.',
       'tz.section.title': 'System Time Zone (general)',
       'tz.card.title': 'Current system time zone', 'tz.chip': 'System', 'tz.reading': 'Reading…',
-      'tz.card.detail': 'Changing it requires administrator approval (UAC). The original timezone is saved on first change and can be restored with “Restore”.',
+      'tz.card.detail': 'Changing it requires system authorization. The original timezone is saved on first change and can be restored with “Restore”.',
       'tz.btn.apply': 'Apply', 'tz.btn.restore': 'Restore',
       'tz.state.detecting': 'Time zone service: probing…',
-      'tz.state.connected': 'Time zone service: <span style="color:var(--ok)">connected</span> · confirm the change in the UAC window',
+      'tz.state.connected': 'Time zone service: <span style="color:var(--ok)">connected</span> · confirm the change in the system prompt',
       'tz.state.needService': 'Local check service required',
       'tz.state.stopped': 'Time zone service: <span style="color:var(--bad)">not running</span> · run the local check service first',
-      'tz.state.modifyIssued': 'Change requested. Click “Yes” in the UAC window; this page refreshes shortly…',
+      'tz.state.modifyIssued': 'Change requested. Confirm in the system prompt; this page refreshes shortly…',
       'tz.state.failed': 'Not applied: {msg}',
       'tz.value': '{display} ({id}, UTC{offset})',
       'footer.line1': 'All results are computed locally in your browser; nothing is uploaded. IP geolocation is looked up through public APIs.<br>This tool is for environment self-checks and privacy troubleshooting; the score does not guarantee how any platform will treat your account.',
@@ -1898,370 +1961,93 @@
     '<li><span class="lv ok">' + t('advice.lv.ok') + '</span><span>' + esc(t('advice.principle')) + '</span></li>';
   }
 
-  /* ---------- 修复脚本生成（下载后由用户以管理员身份运行） ---------- */
-  function psAdminBlock() {
-    return [
-      'if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {',
-      '  Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""',
-      '  exit',
-      '}'
+  /* ---------- 运行系统选择与统一脚本 ---------- */
+  const OS_STORE_KEY = 'envCheckOS';
+
+  function detectOS() {
+    try {
+      const q = new URLSearchParams(location.search).get('os');
+      if (q === 'win' || q === 'linux') return q;
+      const saved = localStorage.getItem(OS_STORE_KEY);
+      if (saved === 'win' || saved === 'linux') return saved;
+    } catch (e) { }
+    const ua = navigator.userAgent || '';
+    return (/Linux|X11/i.test(ua) && !/Android/i.test(ua) && !/Windows/i.test(ua)) ? 'linux' : 'win';
+  }
+
+  let currentOS = detectOS();
+
+  function scriptFile() {
+    return currentOS === 'linux' ? 'env-fix.sh' : 'env-fix.bat';
+  }
+
+  function scriptCmd(action, arg) {
+    const isLinux = currentOS === 'linux';
+    const needsRoot = ['fix', 'restore', 'tun-fix', 'tun-fallback'].indexOf(action) !== -1 || (action === 'tz' && !!arg);
+    const exe = isLinux ? './env-fix.sh' : '.\\env-fix.bat';
+    return (isLinux && needsRoot ? 'sudo ' : '') + exe + ' ' + action + (arg ? ' ' + arg : '');
+  }
+
+  function downloadScript() {
+    const file = scriptFile();
+    const a = document.createElement('a');
+    a.href = file;
+    a.download = file;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function renderScriptGuide() {
+    const el = $('scriptGuide');
+    if (!el) return;
+    const isLinux = currentOS === 'linux';
+    const file = scriptFile();
+    const rows = [
+      ['guide.cmd.fix', 'fix', 'all'],
+      ['guide.cmd.fixWebrtc', 'fix', 'webrtc'],
+      ['guide.cmd.fixIpv6', 'fix', 'ipv6'],
+      ['guide.cmd.fixDns', 'fix', 'dns'],
+      ['guide.cmd.restore', 'restore', 'all'],
+      ['guide.cmd.check', 'check', ''],
+      ['guide.cmd.tunFix', 'tun-fix', ''],
+      ['guide.cmd.fallback', 'tun-fallback', ''],
+      ['guide.cmd.serve', 'serve', '']
     ];
+    const rowsHtml = rows.map(function (r) {
+      return '<div class="sg-row"><span>' + esc(t(r[0])) + '</span><code>' + esc(scriptCmd(r[1], r[2])) + '</code></div>';
+    }).join('');
+    el.innerHTML =
+      '<div class="sg-head">' + esc(t('guide.title')) + ' · <a class="sg-file" href="' + file + '" download>' + file + '</a></div>' +
+      '<ol>' +
+        '<li>' + esc(t('guide.step1', { file: file })) + '</li>' +
+        '<li>' + esc(isLinux ? t('guide.step2.linux') : t('guide.step2.win')) + '</li>' +
+        '<li>' + esc(t('guide.step3')) + '</li>' +
+      '</ol>' +
+      '<div class="sg-list">' + rowsHtml + '</div>' +
+      '<div class="sg-foot">' + esc(t('guide.menu')) + '</div>';
   }
 
-  function buildFixScript(task) {
-    const lines = [
-      '# 隐私泄漏修复脚本（会自动请求管理员权限）',
-      '$ErrorActionPreference = "Stop"'
-    ].concat(psAdminBlock()).concat([
-      '',
-      'function Repair-WebRTC {',
-      '  $paths = @("HKLM:\\SOFTWARE\\Policies\\Google\\Chrome","HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge")',
-      '  foreach ($p in $paths) {',
-      '    if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null }',
-      '    New-ItemProperty -Path $p -Name "WebRtcIPHandlingPolicy" -Value "disable_non_proxied_udp" -PropertyType String -Force | Out-Null',
-      '    Write-Host "[OK] $p -> disable_non_proxied_udp" -ForegroundColor Green',
-      '  }',
-      '  Write-Host "请重启 Chrome / Edge 生效；Firefox 请在 about:config 关闭 media.peerconnection.enabled" -ForegroundColor Yellow',
-      '  foreach ($exe in @("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe","C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe")) {',
-      '    if (Test-Path $exe) {',
-      '      $n = "BlockWebRTC-UDP-" + [IO.Path]::GetFileNameWithoutExtension($exe)',
-      '      Remove-NetFirewallRule -DisplayName $n -ErrorAction SilentlyContinue',
-      '      New-NetFirewallRule -DisplayName $n -Direction Outbound -Program $exe -Protocol UDP -Action Block -Profile Any | Out-Null',
-      '      Write-Host "[OK] 防火墙已阻断浏览器 UDP: $exe" -ForegroundColor Green',
-      '    }',
-      '  }',
-      '}',
-      '',
-      'function Repair-IPv6 {',
-      '  Get-NetAdapterBinding -ComponentID ms_tcpip6 | Where-Object { $_.Enabled } | ForEach-Object {',
-      '    try { Disable-NetAdapterBinding -Name $_.Name -ComponentID ms_tcpip6 -ErrorAction Stop; Write-Host "[OK] 已关闭 IPv6: $($_.Name)" -ForegroundColor Green }',
-      '    catch { Write-Host "[FAIL] $($_.Name): $($_.Exception.Message)" -ForegroundColor Red }',
-      '  }',
-      '}',
-      '',
-      'function Repair-DNS {',
-      '  $idx = (Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1).ifIndex',
-      '  if (-not $idx) { Write-Host "[FAIL] 未找到已连接网卡" -ForegroundColor Red; return }',
-      '  try {',
-      '    netsh dns add encryption server=1.1.1.1 dohtemplate=https://cloudflare-dns.com/dns-query autoupgrade=yes | Out-Null',
-      '    netsh dns add encryption server=1.0.0.1 dohtemplate=https://cloudflare-dns.com/dns-query autoupgrade=yes | Out-Null',
-      '  } catch {}',
-      '  Set-DnsClientServerAddress -InterfaceIndex $idx -ServerAddresses 1.1.1.1,1.0.0.1',
-      '  Write-Host "[OK] 已设置 Cloudflare DoH（ifIndex=$idx）" -ForegroundColor Green',
-      '}',
-      '',
-      '$task = "' + task + '"',
-      'if ($task -eq "All") { Repair-WebRTC; Repair-IPv6; Repair-DNS }',
-      'elseif ($task -eq "WebRTC") { Repair-WebRTC }',
-      'elseif ($task -eq "IPv6") { Repair-IPv6 }',
-      'elseif ($task -eq "DNS") { Repair-DNS }',
-      'Write-Host ""',
-      'Read-Host "按回车退出" | Out-Null'
-    ]);
-    return lines.join('\r\n');
+  function bindOsPicker() {
+    const seg = $('osSeg');
+    if (!seg) return;
+    seg.addEventListener('click', function (e) {
+      const btn = e.target.closest ? e.target.closest('button[data-os]') : null;
+      if (!btn) return;
+      const os = btn.getAttribute('data-os');
+      if (os === currentOS) return;
+      currentOS = os;
+      try { localStorage.setItem(OS_STORE_KEY, os); } catch (e) { }
+      updateOsUI();
+    });
   }
 
-  function buildRestoreScript(task) {
-    const lines = [
-      '# 隐私配置还原脚本（会自动请求管理员权限）',
-      '$ErrorActionPreference = "SilentlyContinue"'
-    ].concat(psAdminBlock()).concat([
-      '',
-      'function Restore-WebRTC {',
-      '  foreach ($p in @("HKLM:\\SOFTWARE\\Policies\\Google\\Chrome","HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge")) {',
-      '    if (Test-Path $p) {',
-      '      Remove-ItemProperty -Path $p -Name "WebRtcIPHandlingPolicy" -ErrorAction SilentlyContinue',
-      '      Write-Host "[OK] 已移除 $p 的 WebRTC 策略" -ForegroundColor Green',
-      '    }',
-      '  }',
-      '  foreach ($n in @("BlockWebRTC-UDP-chrome","BlockWebRTC-UDP-msedge")) {',
-      '    if (Get-NetFirewallRule -DisplayName $n -ErrorAction SilentlyContinue) {',
-      '      Remove-NetFirewallRule -DisplayName $n',
-      '      Write-Host "[OK] 已移除防火墙规则 $n" -ForegroundColor Green',
-      '    }',
-      '  }',
-      '}',
-      '',
-      'function Restore-IPv6 {',
-      '  Get-NetAdapterBinding -ComponentID ms_tcpip6 | Where-Object { -not $_.Enabled } | ForEach-Object {',
-      '    try { Enable-NetAdapterBinding -Name $_.Name -ComponentID ms_tcpip6 -ErrorAction Stop; Write-Host "[OK] 已恢复 IPv6: $($_.Name)" -ForegroundColor Green } catch {}',
-      '  }',
-      '}',
-      '',
-      'function Restore-DNS {',
-      '  $idx = (Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1).ifIndex',
-      '  if ($idx) { Set-DnsClientServerAddress -InterfaceIndex $idx -ResetServerAddresses; Write-Host "[OK] DNS 已恢复自动获取" -ForegroundColor Green }',
-      '}',
-      '',
-      '$task = "' + task + '"',
-      'if ($task -eq "All") { Restore-WebRTC; Restore-IPv6; Restore-DNS }',
-      'elseif ($task -eq "WebRTC") { Restore-WebRTC }',
-      'elseif ($task -eq "IPv6") { Restore-IPv6 }',
-      'elseif ($task -eq "DNS") { Restore-DNS }',
-      'Write-Host ""',
-      'Read-Host "按回车退出" | Out-Null'
-    ]);
-    return lines.join('\r\n');
-  }
-
-  function buildTunCheckScript() {
-    const s = String.raw`# TUN 隧道检查（只读，不修改任何配置）
-$ErrorActionPreference = 'SilentlyContinue'
-$script:fail = 0
-
-function Report($label, $ok, $detail) {
-  if ($ok) {
-    Write-Host "[PASS] $label" -ForegroundColor Green
-  } else {
-    Write-Host "[FAIL] $label" -ForegroundColor Red
-    $script:fail++
-  }
-  if ($detail) { Write-Host "       $detail" -ForegroundColor DarkGray }
-}
-
-function TestPort($port) {
-  $client = New-Object Net.Sockets.TcpClient
-  try {
-    $task = $client.ConnectAsync('127.0.0.1', $port)
-    return $task.Wait(800)
-  } catch {
-    return $false
-  } finally {
-    $client.Close()
-  }
-}
-
-Write-Host '=== TUN 隧道状态检查 ===' -ForegroundColor Cyan
-Write-Host ''
-
-$v2 = Get-Process v2rayN -ErrorAction SilentlyContinue | Select-Object -First 1
-$v2Detail = '未运行：请先启动 v2rayN'
-if ($v2) { $v2Detail = "PID $($v2.Id)" }
-Report 'v2rayN 进程' ($null -ne $v2) $v2Detail
-
-$sb = Get-Process sing-box -ErrorAction SilentlyContinue | Select-Object -First 1
-$sbDetail = '未运行：TUN 模式没有启动'
-if ($sb) { $sbDetail = "PID $($sb.Id)" }
-Report 'sing-box 进程' ($null -ne $sb) $sbDetail
-
-$adapters = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.InterfaceDescription -match 'sing-box|sing-tun|wintun|WinTun' -or $_.Name -match 'sing-box|singbox|tun' })
-$tun = $adapters | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
-$tunDetail = '未找到 sing-box / wintun 虚拟网卡'
-if ($tun) { $tunDetail = "$($tun.Name) / $($tun.InterfaceDescription) / Up" }
-elseif ($adapters.Count -gt 0) { $tunDetail = "网卡存在但未启用: $($adapters.Name -join ', ')" }
-Report 'TUN 虚拟网卡' ($null -ne $tun) $tunDetail
-
-$route = Find-NetRoute -RemoteIPAddress '1.1.1.1' -ErrorAction SilentlyContinue | Select-Object -First 1
-$viaTun = $false
-$routeDetail = '无法获取默认路由'
-if ($route) {
-  $routeDetail = "去 1.1.1.1 走 $($route.InterfaceAlias) / $($route.NextHop)"
-  if ($tun -and $route.InterfaceAlias -eq $tun.Name) { $viaTun = $true }
-}
-Report '流量走 TUN 隧道' $viaTun $routeDetail
-
-$elevated = $false
-if ($v2) {
-  try {
-    Add-Type -Namespace TunCheck -Name Native -MemberDefinition @'
-[DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
-[DllImport("advapi32.dll", SetLastError=true)] public static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
-[DllImport("advapi32.dll", SetLastError=true)] public static extern bool GetTokenInformation(IntPtr token, int cls, out int info, int len, out int ret);
-[DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);
-'@
-    $h = [TunCheck.Native]::OpenProcess(0x1000, $false, $v2.Id)
-    $tok = [IntPtr]::Zero
-    [void][TunCheck.Native]::OpenProcessToken($h, 0x0008, [ref]$tok)
-    $val = 0
-    $ret = 0
-    [void][TunCheck.Native]::GetTokenInformation($tok, 20, [ref]$val, 4, [ref]$ret)
-    $elevated = ($val -ne 0)
-    [void][TunCheck.Native]::CloseHandle($tok)
-    [void][TunCheck.Native]::CloseHandle($h)
-  } catch { }
-}
-$elevDetail = '未提权：TUN 会启动失败，请右键“以管理员身份运行”'
-if ($elevated) { $elevDetail = '已提权，可创建 TUN' }
-Report 'v2rayN 管理员权限' $elevated $elevDetail
-
-$tunOk = ($null -ne $sb) -and ($null -ne $tun) -and $viaTun
-$p1081 = TestPort 1081
-$p1080 = TestPort 1080
-if ($tunOk) {
-  $d1 = '未监听（TUN 模式下正常）'
-  if ($p1081) { $d1 = '监听中' }
-  Write-Host "[INFO] 本地代理端口 1081: $d1" -ForegroundColor DarkGray
-  $d0 = '未监听（TUN 模式下正常）'
-  if ($p1080) { $d0 = '监听中' }
-  Write-Host "[INFO] 本地代理端口 1080: $d0" -ForegroundColor DarkGray
-} else {
-  Report '兜底代理端口 1081' $p1081 'TUN 异常时需要系统代理通道'
-  Report 'SOCKS 端口 1080' $p1080 ''
-}
-
-$sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
-$proxyOff = -not [bool]$sp.ProxyEnable
-$spDetail = '系统代理已关闭（TUN 模式下应为关闭）'
-if (-not $proxyOff) { $spDetail = "系统代理开启: $($sp.ProxyServer)（TUN 模式下建议关闭）" }
-Report '系统代理已关闭' $proxyOff $spDetail
-
-$exitIp = $null
-$exitOrg = ''
-$exitDetail = '无法访问外网（已尝试 3 个接口）'
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-foreach ($u in @('https://api.ipify.org?format=json','https://ifconfig.me/ip','https://ipapi.co/json')) {
-  if ($exitIp) { break }
-  try {
-    $info = Invoke-RestMethod $u -TimeoutSec 8
-    if ($info -is [string]) { $exitIp = $info.Trim() }
-    elseif ($info.ip) {
-      $exitIp = $info.ip
-      if ($info.country_name) { $exitOrg = " / $($info.country_name) / $($info.org)" }
-    }
-  } catch { }
-}
-if ($exitIp) { $exitDetail = "出口 $exitIp$exitOrg" }
-Report '网络出口可用' ($null -ne $exitIp) $exitDetail
-
-Write-Host ''
-if ($script:fail -eq 0) {
-  Write-Host '结论: TUN 工作正常，流量已走 sing-box 隧道。' -ForegroundColor Green
-} else {
-  Write-Host "结论: 发现 $script:fail 项异常。可运行 tun-fallback.ps1 切回系统代理。" -ForegroundColor Yellow
-}
-Read-Host '按回车退出' | Out-Null
-`;
-    return s.split('\n').join('\r\n');
-  }
-
-  function buildTunFallbackScript() {
-    const s = String.raw`# TUN 故障兜底：TUN 正常则不做任何修改，异常时切回系统代理
-$ErrorActionPreference = 'SilentlyContinue'
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-function TestPort($port) {
-  $client = New-Object Net.Sockets.TcpClient
-  try {
-    $task = $client.ConnectAsync('127.0.0.1', $port)
-    return $task.Wait(800)
-  } catch {
-    return $false
-  } finally {
-    $client.Close()
-  }
-}
-
-function FindV2rayN {
-  $p = Get-Process v2rayN -ErrorAction SilentlyContinue | Select-Object -First 1
-  if ($p -and $p.Path) { return $p.Path }
-  $hit = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter 'v2rayN.exe' -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1
-  if ($hit) { return $hit.FullName }
-  return $null
-}
-
-Write-Host '=== TUN 故障兜底 ===' -ForegroundColor Cyan
-Write-Host ''
-
-$v2 = Get-Process v2rayN -ErrorAction SilentlyContinue | Select-Object -First 1
-$sb = Get-Process sing-box -ErrorAction SilentlyContinue | Select-Object -First 1
-$tun = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { ($_.InterfaceDescription -match 'sing-box|sing-tun|wintun|WinTun' -or $_.Name -match 'sing-box|singbox|tun') -and $_.Status -eq 'Up' } | Select-Object -First 1
-$route = Find-NetRoute -RemoteIPAddress '1.1.1.1' -ErrorAction SilentlyContinue | Select-Object -First 1
-$viaTun = $false
-if ($route -and $tun -and $route.InterfaceAlias -eq $tun.Name) { $viaTun = $true }
-
-$healthy = ($null -ne $v2) -and ($null -ne $sb) -and ($null -ne $tun) -and $viaTun
-Write-Host "v2rayN=$([bool]$v2)  sing-box=$([bool]$sb)  TUN网卡=$([bool]$tun)  路由走TUN=$viaTun" -ForegroundColor DarkGray
-Write-Host ''
-
-if ($healthy) {
-  Write-Host 'TUN 工作正常，无需恢复系统代理，未做任何修改。' -ForegroundColor Green
-  Read-Host '按回车退出' | Out-Null
-  exit 0
-}
-
-Write-Host '检测到 TUN 异常，开始切回系统代理...' -ForegroundColor Yellow
-
-if (-not $isAdmin) {
-  Write-Host '切换代理模式需要管理员权限，正在提权...' -ForegroundColor Yellow
-  Start-Process powershell.exe -Verb RunAs -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File', $PSCommandPath)
-  exit
-}
-
-$exe = FindV2rayN
-if (-not $exe) {
-  Write-Host '未找到 v2rayN.exe，无法自动恢复。' -ForegroundColor Red
-  Write-Host '请手动把系统代理设为 127.0.0.1:1081。' -ForegroundColor Yellow
-  Read-Host '按回车退出' | Out-Null
-  exit 1
-}
-$cfg = Join-Path (Split-Path $exe -Parent) 'guiConfigs\guiNConfig.json'
-
-# 先停止运行中的实例，避免它退出时把旧配置写回
-Get-Process v2rayN -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Seconds 2
-Get-Process sing-box -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Seconds 1
-
-if (Test-Path $cfg) {
-  Copy-Item $cfg "$cfg.bak-fallback" -Force
-  try {
-    $j = Get-Content $cfg -Raw | ConvertFrom-Json
-    if ($j.tunModeItem) { $j.tunModeItem.enableTun = $false }
-    $j.sysProxyType = 1
-    $j | ConvertTo-Json -Depth 20 | Set-Content $cfg -Encoding UTF8
-    Write-Host '配置已更新: enableTun=false, sysProxyType=1' -ForegroundColor Green
-  } catch {
-    Write-Host "配置写入失败: $($_.Exception.Message)" -ForegroundColor Red
-  }
-}
-
-Start-Process $exe
-Start-Sleep -Seconds 6
-
-$sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
-$proxyPort = 1081
-if ($sp.ProxyServer -match ':(\d+)') { $proxyPort = [int]$Matches[1] }
-
-$portOk = $false
-for ($i = 0; $i -lt 15; $i++) {
-  if (TestPort $proxyPort) { $portOk = $true; break }
-  Start-Sleep -Seconds 1
-}
-
-$sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
-$proxyOn = [bool]$sp.ProxyEnable
-if (-not $proxyOn) {
-  Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyEnable -Value 1
-  Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyServer -Value "127.0.0.1:$proxyPort"
-  $sp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
-  $proxyOn = [bool]$sp.ProxyEnable
-}
-
-$exitIp = $null
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-foreach ($u in @('https://api.ipify.org?format=json','https://ifconfig.me/ip','https://ipapi.co/json')) {
-  if ($exitIp) { break }
-  try {
-    $info = Invoke-RestMethod $u -TimeoutSec 8
-    if ($info -is [string]) { $exitIp = $info.Trim() }
-    elseif ($info.ip) { $exitIp = $info.ip }
-  } catch { }
-}
-
-Write-Host ''
-if ($portOk) { Write-Host "[PASS] 本地代理端口 $proxyPort 已监听" -ForegroundColor Green } else { Write-Host "[FAIL] 端口 $proxyPort 未监听" -ForegroundColor Red }
-if ($proxyOn) { Write-Host "[PASS] 系统代理已开启: $($sp.ProxyServer)" -ForegroundColor Green } else { Write-Host '[FAIL] 系统代理未能开启' -ForegroundColor Red }
-if ($exitIp) { Write-Host "[PASS] 网络出口: $exitIp" -ForegroundColor Green } else { Write-Host '[FAIL] 出口仍不可用，请检查节点或订阅' -ForegroundColor Red }
-
-Write-Host ''
-if ($portOk -and $proxyOn -and $exitIp) {
-  Write-Host '结论: 已切回系统代理模式，可正常上网。TUN 问题修复后再手动开启。' -ForegroundColor Green
-} else {
-  Write-Host '结论: 自动恢复未完全成功，请检查 v2rayN 界面与节点状态。' -ForegroundColor Yellow
-}
-Read-Host '按回车退出' | Out-Null
-`;
-    return s.split('\n').join('\r\n');
+  function updateOsUI() {
+    document.querySelectorAll('#osSeg button[data-os]').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-os') === currentOS);
+    });
+    renderScriptGuide();
+    updateAgentStateText();
   }
 
   const TUN_AGENT = 'http://127.0.0.1:8788';
@@ -2292,7 +2078,7 @@ Read-Host '按回车退出' | Out-Null
       }
       el.innerHTML = s;
     } else {
-      el.innerHTML = t('tun.agent.stopped');
+      el.innerHTML = t('tun.agent.stopped', { file: scriptFile(), cmd: scriptCmd('serve') });
     }
   }
 
@@ -2338,7 +2124,7 @@ Read-Host '按回车退出' | Out-Null
       setAgentState(true, data.time);
     } catch (e) {
       clearTimeout(timer);
-      box.innerHTML = '<div class="tun-line"><span class="chip bad">' + t('status.bad') + '</span><span class="tun-detail">' + t('tun.notConnected') + '</span></div>';
+      box.innerHTML = '<div class="tun-line"><span class="chip bad">' + t('status.bad') + '</span><span class="tun-detail">' + t('tun.notConnected', { file: scriptFile(), cmd: scriptCmd('serve') }) + '</span></div>';
       setAgentState(false);
     }
   }
@@ -2544,35 +2330,21 @@ Read-Host '按回车退出' | Out-Null
     if (ta) ta.addEventListener('click', function () { applyTz('set'); });
     if (tr) tr.addEventListener('click', function () { applyTz('restore'); });
     if (b1) b1.addEventListener('click', function () {
-      downloadText('check-tun.ps1', buildTunCheckScript());
-      const old = this.textContent;
-      this.textContent = t('tun.btn.downloaded');
-      setTimeout(() => { this.textContent = old; }, 1800);
+      downloadScript();
+      showToast(t('guide.downloaded', { file: scriptFile(), cmd: scriptCmd('check') }));
     });
     if (b2) b2.addEventListener('click', function () {
-      downloadText('tun-fallback.ps1', buildTunFallbackScript());
-      const old = this.textContent;
-      this.textContent = t('tun.btn.downloaded');
-      setTimeout(() => { this.textContent = old; }, 1800);
+      downloadScript();
+      showToast(t('guide.downloaded', { file: scriptFile(), cmd: scriptCmd('tun-fallback') }));
     });
   }
+  bindOsPicker();
   bindTunButtons();
+  updateOsUI();
   bindCardActions();
   pingTunAgent();
   setInterval(pingTunAgent, 5000);
   loadTz();
-
-  function downloadText(filename, text) {
-    const blob = new Blob(['\ufeff' + text], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }
 
   function renderLeakPanel(leaks) {
     const wrap = $('leakRows');
@@ -2604,8 +2376,9 @@ Read-Host '按回车退出' | Out-Null
       btn.addEventListener('click', function () {
         const task = this.getAttribute('data-task');
         const mode = this.getAttribute('data-mode');
-        if (mode === 'fix') downloadText('privacy-fix-' + task.toLowerCase() + '.ps1', buildFixScript(task));
-        else downloadText('privacy-restore-' + task.toLowerCase() + '.ps1', buildRestoreScript(task));
+        const arg = task.toLowerCase();
+        downloadScript();
+        showToast(t('guide.downloaded', { file: scriptFile(), cmd: scriptCmd(mode === 'fix' ? 'fix' : 'restore', arg) }));
         const old = this.textContent;
         this.textContent = mode === 'fix' ? t('leak.downloaded') : t('leak.downloadedRestore');
         setTimeout(() => { this.textContent = old; }, 1800);
@@ -2761,6 +2534,7 @@ Read-Host '按回车退出' | Out-Null
     document.title = t('doc.title');
     applyMetaI18n();
     applyStaticI18n();
+    renderScriptGuide();
     updateLangBtn();
     updateAgentStateText();
     updateTzStateText();

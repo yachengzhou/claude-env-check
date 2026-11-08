@@ -39,7 +39,7 @@ jobs:
           sed "s|__SITE_URL__|${SITE_URL}|g" robots.txt > _site/robots.txt
           sed "s|__SITE_URL__|${SITE_URL}|g" sitemap.xml > _site/sitemap.xml
           cp og-cover.jpg _site/og-cover.jpg
-          cp tun-agent.ps1 start-tun-check.bat start-tun-check-silent.vbs _site/
+          cp env-fix.bat env-fix.sh _site/
           touch _site/.nojekyll
           ls -la _site
 
