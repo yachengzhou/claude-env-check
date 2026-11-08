@@ -442,7 +442,7 @@
     <div id="tunAgentState" class="tun-state" data-i18n="tun.state.detecting">检查服务：检测中…</div>
     <div id="tunResult" class="tun-result" hidden></div>
     <div class="leak-note" data-i18n-html="tun.note">
-      「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，运行同目录的 start-tun-check.bat 即可。<br>
+      「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，请从本站下载 start-tun-check.bat 与 tun-agent.ps1 放到同一目录后双击运行。<br>
       「一键修复」会弹出 UAC 授权：自动关闭系统代理、在 v2rayN 配置中开启 TUN，并以管理员身份重启 v2rayN，修复后再自动复检；若 TUN 始终无法就绪，会切回系统代理保证联网。<br>
       「下载检查脚本」可单独在 PowerShell 中运行；「故障兜底」仅在 TUN 异常时才切回系统代理，正常时不做任何修改。<br>
       启动服务后也可直接访问 http://127.0.0.1:8788/ 使用页面。
@@ -596,17 +596,17 @@
       'tun.btn.fix': '一键修复', 'tun.btn.run': '一键检查', 'tun.btn.script': '下载检查脚本',
       'tun.btn.fallback': '故障兜底', 'tun.btn.downloaded': '已下载',
       'tun.state.detecting': '检查服务：检测中…',
-      'tun.note': '「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，运行同目录的 start-tun-check.bat 即可。<br>「一键修复」会弹出 UAC 授权：自动关闭系统代理、在 v2rayN 配置中开启 TUN，并以管理员身份重启 v2rayN，修复后再自动复检；若 TUN 始终无法就绪，会切回系统代理保证联网。<br>「下载检查脚本」可单独在 PowerShell 中运行；「故障兜底」仅在 TUN 异常时才切回系统代理，正常时不做任何修改。<br>启动服务后也可直接访问 http://127.0.0.1:8788/ 使用页面。',
+      'tun.note': '「一键检查」直接在本页显示结果，本地检查服务已设为开机自动启动（无窗口、只读）；若状态显示未启动，请下载 <a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> 与 <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a> 放到同一目录后双击运行。<br>「一键修复」会弹出 UAC 授权：自动关闭系统代理、在 v2rayN 配置中开启 TUN，并以管理员身份重启 v2rayN，修复后再自动复检；若 TUN 始终无法就绪，会切回系统代理保证联网。<br>「下载检查脚本」可单独在 PowerShell 中运行；「故障兜底」仅在 TUN 异常时才切回系统代理，正常时不做任何修改。<br>启动服务后也可直接访问 http://127.0.0.1:8788/ 使用页面。',
       'tun.agent.connected': '检查服务：<span style="color:var(--ok)">已连接</span>',
-      'tun.agent.stopped': '检查服务：<span style="color:var(--bad)">未启动</span> · 请双击同目录的 start-tun-check.bat',
+      'tun.agent.stopped': '检查服务：<span style="color:var(--bad)">未启动</span> · 需在本机运行检查服务：<a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> + <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a>（放同一目录后双击 bat）',
       'tun.updatedAt': '更新于 {time}', 'tun.updatedAfterFix': '修复后更新于 {time}',
       'tun.running': '正在执行本地检查（最长约 30 秒）…',
-      'tun.notConnected': '检查服务未启动。可运行同目录的 start-tun-check.bat；服务已设为开机自启，页面每 5 秒自动重连。',
+      'tun.notConnected': '检查服务未启动。请先在本机下载并运行 start-tun-check.bat（与 tun-agent.ps1 放同一目录）；服务启动后本页会自动重连，无需刷新。',
       'tun.conclusion.ok': '结论：全部检查项通过。',
       'tun.conclusion.fail': '结论：发现 {n} 项异常。',
       'tun.fixing': '修复中', 'tun.fixFailed': '修复失败',
       'tun.askAdmin': '正在请求管理员权限，请在 UAC 弹窗中点「是」…',
-      'tun.cannotStart': '无法启动修复：{msg}（请确认 start-tun-check.bat 已启动）',
+      'tun.cannotStart': '无法启动修复：{msg}（请确认本地检查服务已启动）',
       'tun.rechecking': '修复流程结束，正在重新检查（约 20 秒）…',
       'tun.waitTimeout': '等待超时，正在重新检查当前状态…',
       'tun.cannotRead': '修复后无法获取检查结果，请确认检查服务仍在运行。',
@@ -617,7 +617,7 @@
       'tz.state.detecting': '时区服务：检测中…',
       'tz.state.connected': '时区服务：<span style="color:var(--ok)">已连接</span> · 修改需在 UAC 窗口确认',
       'tz.state.needService': '需要本地检查服务',
-      'tz.state.stopped': '时区服务：<span style="color:var(--bad)">未启动</span> · 先双击 start-tun-check.bat',
+      'tz.state.stopped': '时区服务：<span style="color:var(--bad)">未启动</span> · 需先运行本地检查服务再使用',
       'tz.state.modifyIssued': '已发起修改，请在 UAC 窗口点「是」，稍后自动刷新…',
       'tz.state.failed': '未执行：{msg}',
       'tz.value': '{display}（{id}，UTC{offset}）',
@@ -798,17 +798,17 @@
       'tun.btn.fix': 'Auto-fix', 'tun.btn.run': 'Run check', 'tun.btn.script': 'Download check script',
       'tun.btn.fallback': 'Fallback mode', 'tun.btn.downloaded': 'Downloaded',
       'tun.state.detecting': 'Check service: probing…',
-      'tun.note': '“Run check” displays results on this page. The local check service starts automatically at boot (windowless, read-only). If it shows as stopped, run start-tun-check.bat from the same folder.<br>“Auto-fix” triggers a UAC prompt: it disables the system proxy, enables TUN in the v2rayN config, restarts v2rayN elevated, and re-checks automatically. If TUN still cannot start, it falls back to the system proxy so you stay online.<br>“Download check script” can be run standalone in PowerShell. “Fallback mode” only switches to the system proxy when TUN is unhealthy and changes nothing otherwise.<br>Once the service is running you can also open http://127.0.0.1:8788/ directly.',
+      'tun.note': '“Run check” displays results on this page. The local check service starts automatically at boot (windowless, read-only). If it shows as stopped, download <a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> and <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a>, keep them in one folder, then double-click the .bat.<br>“Auto-fix” triggers a UAC prompt: it disables the system proxy, enables TUN in the v2rayN config, restarts v2rayN elevated, and re-checks automatically. If TUN still cannot start, it falls back to the system proxy so you stay online.<br>“Download check script” can be run standalone in PowerShell. “Fallback mode” only switches to the system proxy when TUN is unhealthy and changes nothing otherwise.<br>Once the service is running you can also open http://127.0.0.1:8788/ directly.',
       'tun.agent.connected': 'Check service: <span style="color:var(--ok)">connected</span>',
-      'tun.agent.stopped': 'Check service: <span style="color:var(--bad)">not running</span> · double-click start-tun-check.bat in the same folder',
+      'tun.agent.stopped': 'Check service: <span style="color:var(--bad)">not running</span> · run the local service: download <a href="start-tun-check.bat" download style="color:var(--info)">start-tun-check.bat</a> + <a href="tun-agent.ps1" download style="color:var(--info)">tun-agent.ps1</a> into one folder, then double-click the .bat',
       'tun.updatedAt': 'updated at {time}', 'tun.updatedAfterFix': 'updated after fix at {time}',
       'tun.running': 'Running local checks (up to ~30 seconds)…',
-      'tun.notConnected': 'Check service is not running. Run start-tun-check.bat in the same folder; it auto-starts at boot and this page reconnects every 5 seconds.',
+      'tun.notConnected': 'Check service is not running. Download start-tun-check.bat and tun-agent.ps1 from this page, run the .bat, and this page reconnects automatically.',
       'tun.conclusion.ok': 'Result: all checks passed.',
       'tun.conclusion.fail': 'Result: {n} check(s) failed.',
       'tun.fixing': 'Fixing', 'tun.fixFailed': 'Fix failed',
       'tun.askAdmin': 'Requesting administrator rights — click “Yes” in the UAC prompt…',
-      'tun.cannotStart': 'Unable to start the fix: {msg} (make sure start-tun-check.bat is running)',
+      'tun.cannotStart': 'Unable to start the fix: {msg} (make sure the local check service is running)',
       'tun.rechecking': 'Fix finished. Re-checking in about 20 seconds…',
       'tun.waitTimeout': 'Timed out while waiting. Re-checking the current state…',
       'tun.cannotRead': 'Could not retrieve results after the fix. Make sure the check service is still running.',
@@ -819,7 +819,7 @@
       'tz.state.detecting': 'Time zone service: probing…',
       'tz.state.connected': 'Time zone service: <span style="color:var(--ok)">connected</span> · confirm the change in the UAC window',
       'tz.state.needService': 'Local check service required',
-      'tz.state.stopped': 'Time zone service: <span style="color:var(--bad)">not running</span> · run start-tun-check.bat first',
+      'tz.state.stopped': 'Time zone service: <span style="color:var(--bad)">not running</span> · run the local check service first',
       'tz.state.modifyIssued': 'Change requested. Click “Yes” in the UAC window; this page refreshes shortly…',
       'tz.state.failed': 'Not applied: {msg}',
       'tz.value': '{display} ({id}, UTC{offset})',
@@ -2279,6 +2279,7 @@ Read-Host '按回车退出' | Out-Null
   }
 
   async function pingTunAgent() {
+    const wasOk = lastAgentState.ok;
     try {
       const c = new AbortController();
       const timer = setTimeout(() => c.abort(), 1500);
@@ -2288,6 +2289,7 @@ Read-Host '按回车退出' | Out-Null
     } catch (e) {
       setAgentState(false);
     }
+    if (!wasOk && lastAgentState.ok && lastTzOffline) loadTz();
   }
 
   async function runTunCheck() {
