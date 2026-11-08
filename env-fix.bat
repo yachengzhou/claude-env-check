@@ -43,7 +43,7 @@ if ($argv.Count -ge 2) { $sub = ([string]$argv[1]).ToLower() }
 if ($argv.Count -ge 3) { $opt = ([string]$argv[2]).ToLower() }
 
 # ---------- 自动提权 ----------
-$needAdmin = @('fix', 'restore', 'tun-fix', 'tun-fallback') -contains $cmd
+$needAdmin = @('fix', 'restore', 'tun-fix', 'tun-fallback', 'menu') -contains $cmd
 if ($cmd -eq 'tz' -and $argv.Count -ge 2) { $needAdmin = $true }
 if ($needAdmin -and -not (Test-Admin)) {
   $code = Get-SelfCode
