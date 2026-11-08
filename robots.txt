@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# TODO: deploy 前把 __SITE_URL__ 替换为真实域名（例如 https://envcheck.example.com）
 Sitemap: __SITE_URL__/sitemap.xml
