@@ -33,7 +33,9 @@ jobs:
           echo "SITE_URL=$SITE_URL" >> "$GITHUB_ENV"
 
           mkdir -p _site
-          sed "s|__SITE_URL__|${SITE_URL}|g" env-check.html > _site/index.html
+          # 只替换 <body> 之前的头部标记；页面内 JS 的 applySiteUrl() 含有
+          # __SITE_URL__ 正则字面量，全局替换会破坏脚本语法
+          sed "0,/<body/ s|__SITE_URL__|${SITE_URL}|g" env-check.html > _site/index.html
           sed "s|__SITE_URL__|${SITE_URL}|g" robots.txt > _site/robots.txt
           sed "s|__SITE_URL__|${SITE_URL}|g" sitemap.xml > _site/sitemap.xml
           cp og-cover.jpg _site/og-cover.jpg
