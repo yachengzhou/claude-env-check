@@ -422,6 +422,7 @@
     <div class="hero-actions">
       <button id="btnRefresh" class="primary" data-i18n="btn.refresh">重新检测</button>
       <button id="btnCopy" data-i18n="btn.copy">复制报告</button>
+      <button id="btnShare" data-i18n="btn.share">分享结果</button>
     </div>
 
     <div class="legend">
@@ -583,6 +584,13 @@
       'app.sub': '检查节点 IP、系统时区、浏览器语言与字体是否与出口地区一致 · 排查 WebRTC / DNS / IPv6 泄漏',
       'btn.copy': '复制报告', 'btn.copyDone': '已复制',
       'btn.refresh': '重新检测', 'btn.refreshing': '检测中…',
+      'btn.share': '分享结果',
+      'share.done': '分享图已生成，文案已复制，可直接发到社交平台',
+      'share.empty': '请先完成一次检测',
+      'share.text': '我用环境自检工具查了 Claude / ChatGPT 账号环境：{score}/100（{tier}）。主要问题：{issues}。在线自测：{url}',
+      'share.noIssues': '未发现明显冲突',
+      'share.cardTitle': 'Claude / ChatGPT 环境自检',
+      'share.cardFooter': '免费 · 浏览器本地检测 · Windows / Ubuntu 一键修复',
       'score.unit': '分',
       'status.ok': '一致', 'status.warn': '存疑', 'status.bad': '冲突', 'status.info': '信息',
       'legend.ok': '一致', 'legend.warn': '存疑', 'legend.bad': '冲突', 'legend.info': '仅信息',
@@ -803,6 +811,13 @@
       'app.sub': 'Verify that your exit IP, system timezone, browser language and fonts match your region · detect WebRTC / DNS / IPv6 leaks',
       'btn.copy': 'Copy report', 'btn.copyDone': 'Copied',
       'btn.refresh': 'Rescan', 'btn.refreshing': 'Scanning…',
+      'btn.share': 'Share result',
+      'share.done': 'Share card saved and summary copied. Post it anywhere.',
+      'share.empty': 'Run a scan first',
+      'share.text': 'I checked my Claude / ChatGPT account environment: {score}/100 ({tier}). Main issues: {issues}. Try it: {url}',
+      'share.noIssues': 'no obvious conflicts',
+      'share.cardTitle': 'Claude / ChatGPT Environment Check',
+      'share.cardFooter': 'Free · runs locally in your browser · Windows / Ubuntu fix scripts',
       'score.unit': 'pts',
       'status.ok': 'Consistent', 'status.warn': 'Suspect', 'status.bad': 'Conflict', 'status.info': 'Info',
       'legend.ok': 'Consistent', 'legend.warn': 'Suspect', 'legend.bad': 'Conflict', 'legend.info': 'Info only',
@@ -2444,6 +2459,110 @@
     return lines.join('\n');
   }
 
+  /* ---------- 分享图 ---------- */
+  const SHARE_FALLBACK_URL = 'https://yachengzhou.github.io/claude-env-check/';
+
+  function shareUrl() {
+    return /^https?:$/.test(location.protocol) ? location.origin + location.pathname : SHARE_FALLBACK_URL;
+  }
+
+  function shareTier(score) {
+    return score <= 30 ? 'low' : score <= 60 ? 'mid' : 'high';
+  }
+
+  function shareIssues() {
+    return lastResult.cards.filter(function (c) { return c.status === 'bad'; }).map(function (c) {
+      return c.code === 'TUN' ? t('card.tun.title') : cardText(c.title);
+    });
+  }
+
+  function buildShareText(score, tier) {
+    const bad = shareIssues();
+    return t('share.text', {
+      score: score,
+      tier: t('tier.' + tier + '.label'),
+      issues: bad.length ? bad.slice(0, 3).join(' / ') : t('share.noIssues'),
+      url: shareUrl()
+    });
+  }
+
+  function fitText(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let s = text;
+    while (s.length > 1 && ctx.measureText(s + '…').width > maxWidth) s = s.slice(0, -1);
+    return s + '…';
+  }
+
+  function buildShareCard(score, tier) {
+    const W = 1200, H = 630;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const colors = { low: '#34d399', mid: '#fbbf24', high: '#f87171' };
+    const color = colors[tier];
+
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0b1020');
+    bg.addColorStop(1, '#101a2c');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,.05)';
+    for (let i = 1; i < 12; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, i * 56);
+      ctx.lineTo(W, i * 56);
+      ctx.stroke();
+    }
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 10, H);
+
+    ctx.fillStyle = '#e8eef8';
+    ctx.font = '700 38px system-ui,"Segoe UI","Microsoft YaHei",sans-serif';
+    ctx.fillText(t('share.cardTitle'), 64, 96);
+
+    ctx.fillStyle = color;
+    ctx.font = '800 148px system-ui,"Segoe UI",sans-serif';
+    const scoreText = String(score);
+    ctx.fillText(scoreText, 64, 300);
+    const sw = ctx.measureText(scoreText).width;
+    ctx.fillStyle = '#8fa3bf';
+    ctx.font = '600 40px system-ui,"Segoe UI",sans-serif';
+    ctx.fillText('/100', 64 + sw + 14, 300);
+
+    ctx.fillStyle = color;
+    ctx.font = '700 30px system-ui,"Segoe UI","Microsoft YaHei",sans-serif';
+    ctx.fillText(t('tier.' + tier + '.label'), 64, 358);
+
+    ctx.fillStyle = '#8fa3bf';
+    ctx.font = '600 22px system-ui,"Segoe UI","Microsoft YaHei",sans-serif';
+    ctx.fillText(LANG === 'zh' ? '主要问题' : 'Top issues', 660, 140);
+
+    const bad = shareIssues().slice(0, 3);
+    ctx.font = '500 26px system-ui,"Segoe UI","Microsoft YaHei",sans-serif';
+    if (!bad.length) {
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText(t('share.noIssues'), 660, 190);
+    } else {
+      bad.forEach(function (name, i) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(672, 182 + i * 56, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(fitText(ctx, name, 450), 692, 190 + i * 56);
+      });
+    }
+
+    ctx.fillStyle = '#6b7f9c';
+    ctx.font = '500 22px system-ui,"Segoe UI","Microsoft YaHei",sans-serif';
+    ctx.fillText(t('share.cardFooter'), 64, 552);
+    ctx.fillStyle = '#8fa3bf';
+    ctx.fillText(shareUrl().replace(/^https?:\/\//, ''), 64, 590);
+
+    return new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
+  }
+
   async function refresh() {
     const btn = $('btnRefresh');
     btn.disabled = true;
@@ -2592,6 +2711,33 @@
       this.textContent = t('btn.copyDone');
       setTimeout(() => { this.textContent = t('btn.copy'); }, 1500);
     }
+  });
+
+  $('btnShare').addEventListener('click', async function () {
+    if (!lastResult) { showToast(t('share.empty')); return; }
+    const score = computeScore(lastResult.cards);
+    const tier = shareTier(score);
+    const text = buildShareText(score, tier);
+    const blob = await buildShareCard(score, tier);
+    const name = 'env-check-' + score + '.png';
+    try {
+      const file = new File([blob], name, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: text });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    try { await navigator.clipboard.writeText(text); } catch (e) { }
+    showToast(t('share.done'));
   });
 
   LANG = detectLang();

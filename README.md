@@ -6,6 +6,14 @@ An in-browser self-check for the environment signals that overseas services (Cla
 
 **在线使用 / Live demo:** https://yachengzhou.github.io/claude-env-check/
 
+[![Stars](https://img.shields.io/github/stars/yachengzhou/claude-env-check?style=social)](https://github.com/yachengzhou/claude-env-check/stargazers)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Deploy](https://img.shields.io/github/actions/workflow/status/yachengzhou/claude-env-check/pages.yml?label=pages)](https://github.com/yachengzhou/claude-env-check/actions)
+
+![preview](og-cover.jpg)
+
+> 如果这个工具帮你发现了问题，点一个 Star 就是最好的支持。If this tool helped you, a star is the best way to say thanks.
+
 [中文](#中文) · [English](#english)
 
 ---
@@ -23,6 +31,22 @@ Claude、ChatGPT 这类服务在风控时，不只看你的 IP 在哪个国家�
 - 代理客户端开了 TUN，但路由或 DNS 没走对
 
 任何一项对不上，都可能让账号被标记。这个工具做的事，就是把这些信号一次性摊开，告诉你哪几项矛盾、怎么改。
+
+### 和同类工具比
+
+| 能力 | 本项目 | fuck-claude.app |
+| --- | :---: | :---: |
+| 浏览器指纹检测项 | 15 项 | 11 项 |
+| 出口 IP 归属地与机房标记 | 支持 | 无 |
+| WebRTC / IPv6 / DNS 真实泄漏检测 | 支持 | 无 |
+| TUN 隧道与代理进程检查 | 支持 | 无 |
+| 一键修复脚本（Windows + Ubuntu） | 支持 | 无 |
+| 时区查看 / 修改 / 还原 | 支持 | 仅提示修改 |
+| 分享结果图 | 支持 | 无 |
+| 中英双语 | 支持 | 英文 |
+
+差异不是为了贬低谁，而是说明：**它能告诉你「哪里不对」，我们还能帮你「直接改好」。**
+
 
 ### 隐私说明
 
@@ -148,6 +172,21 @@ Services like Claude and ChatGPT don't only look at which country your IP is in 
 - TUN is enabled, but routing or DNS isn't actually going through it
 
 Any single mismatch can get an account flagged. This tool lays all of those signals out at once and tells you which ones conflict — and how to fix them.
+
+### Compared with similar tools
+
+| Capability | This project | fuck-claude.app |
+| --- | :---: | :---: |
+| Browser fingerprint signals | 15 | 11 |
+| Exit IP geolocation and hosting flag | Yes | No |
+| Real WebRTC / IPv6 / DNS leak detection | Yes | No |
+| TUN tunnel and proxy process check | Yes | No |
+| One-click fix scripts (Windows + Ubuntu) | Yes | No |
+| View / set / restore system time zone | Yes | Advice only |
+| Shareable result card | Yes | No |
+| Chinese + English | Yes | English |
+
+The point isn't to disparage anyone: **others tell you what's wrong — we also fix it for you.**
 
 ### Privacy
 
