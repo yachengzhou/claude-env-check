@@ -538,6 +538,13 @@
     <div id="tzMsg" class="tun-state" data-i18n="tz.state.detecting">时区服务：检测中…</div>
   </section>
 
+  <section class="seo" id="mechanism">
+    <h2 data-i18n="mech.h2">Claude 是怎么判定中国用户的？</h2>
+    <p data-i18n="mech.p1">据公开的逆向分析报告，Claude Code 在访问非官方端点时会读取操作系统时区，并检查代理主机名中是否包含被标记的域名或 AI 实验室关键词。时区命中 Asia/Shanghai、Asia/Urumqi 等值，是最直接的单一信号。</p>
+    <p data-i18n="mech.p2">除此之外，服务端还会综合浏览器语言、系统字体、Intl 区域、支付方式、手机号与使用行为。单项异常通常不致命，真正危险的是互相矛盾的组合，例如 IP 在美国、时区是 UTC+8、首选语言是 zh-CN。</p>
+    <p data-i18n="mech.p3">本工具用 15 项加权信号模拟这种「自洽性」判断：分数只代表本机环境与出口地区的矛盾程度，不代表平台的最终判定，更不构成账号安全的保证。逆向结论也非官方确认，请把它当作参考而非定论。</p>
+  </section>
+
   <section class="seo" id="faq">
     <h2 data-i18n="seo.h2">Claude / ChatGPT 防封号环境检测常见问题</h2>
     <p data-i18n="seo.intro">本工具面向使用 Claude、ChatGPT 与科学上网的用户，一键检查节点 IP、系统时区、浏览器语言、字体与渲染指纹是否与出口地区自洽，并排查 WebRTC、DNS、IPv6 泄漏，降低因环境矛盾被风控标记的概率。所有检测在浏览器本地完成。</p>
@@ -595,6 +602,10 @@
       'og.title': 'Claude / ChatGPT 环境检测 · 防封号自检',
       'og.description': '检查节点 IP、系统时区、浏览器语言与字体是否和出口地区一致，排查 WebRTC / IPv6 / DNS 泄漏，支持 TUN 隧道一键检查与修复。',
       'og.locale': 'zh_CN',
+      'mech.h2': 'Claude 是怎么判定中国用户的？',
+      'mech.p1': '据公开的逆向分析报告，Claude Code 在访问非官方端点时会读取操作系统时区，并检查代理主机名中是否包含被标记的域名或 AI 实验室关键词。时区命中 Asia/Shanghai、Asia/Urumqi 等值，是最直接的单一信号。',
+      'mech.p2': '除此之外，服务端还会综合浏览器语言、系统字体、Intl 区域、支付方式、手机号与使用行为。单项异常通常不致命，真正危险的是互相矛盾的组合，例如 IP 在美国、时区是 UTC+8、首选语言是 zh-CN。',
+      'mech.p3': '本工具用 15 项加权信号模拟这种「自洽性」判断：分数只代表本机环境与出口地区的矛盾程度，不代表平台的最终判定，更不构成账号安全的保证。逆向结论也非官方确认，请把它当作参考而非定论。',
       'seo.h2': 'Claude / ChatGPT 防封号环境检测常见问题',
       'seo.intro': '本工具面向使用 Claude、ChatGPT 与科学上网的用户，一键检查节点 IP、系统时区、浏览器语言、字体与渲染指纹是否与出口地区自洽，并排查 WebRTC、DNS、IPv6 泄漏，降低因环境矛盾被风控标记的概率。所有检测在浏览器本地完成。',
       'seo.q1': '账号被封或提示地区不可用，是环境问题吗？',
@@ -825,6 +836,10 @@
       'og.title': 'Claude / ChatGPT Environment Check · Anti-Ban Self-Audit',
       'og.description': 'Check whether your exit IP, timezone, browser language and fonts match your region, and detect WebRTC / IPv6 / DNS leaks with local fix scripts.',
       'og.locale': 'en_US',
+      'mech.h2': 'How does Claude decide that a user is in China?',
+      'mech.p1': 'According to public reverse-engineering reports, Claude Code reads the OS time zone when talking to non-official endpoints and also inspects the proxy hostname for flagged domains or AI-lab keywords. A time zone such as Asia/Shanghai or Asia/Urumqi is the most direct single signal.',
+      'mech.p2': 'Beyond that, the server side weighs browser language, system fonts, Intl locale, payment method, phone number and usage behaviour. A single odd value is rarely fatal; the dangerous part is a contradictory combination, e.g. IP in the US, time zone UTC+8 and preferred language zh-CN.',
+      'mech.p3': 'This tool models that consistency check with 15 weighted signals. The score reflects how contradictory your local environment is relative to your exit region; it is not the platform’s verdict and does not guarantee account safety. The reverse-engineering claims are unofficial — treat them as a reference, not a fact.',
       'seo.h2': 'Claude / ChatGPT anti-ban environment check FAQ',
       'seo.intro': 'Built for Claude, ChatGPT and VPN users: run one scan to check whether your exit IP, system timezone, browser language, fonts and rendering fingerprints match your region, and to detect WebRTC, DNS and IPv6 leaks. Everything runs locally in your browser.',
       'seo.q1': 'Is my ban or region error caused by my environment?',
