@@ -185,6 +185,8 @@
   .hero-china .china-bar{width:120px;height:5px;border-radius:999px;background:#222a3a;overflow:hidden}
   .hero-china .china-bar i{display:block;height:100%;width:0;background:var(--tier-color);transition:width .9s cubic-bezier(.22,.61,.36,1)}
   .hero-china .china-pct{font-family:Consolas,monospace;font-size:12px;color:var(--muted)}
+  .hero-china.is-done .china-bar,
+  .hero-china.is-done .china-pct{display:none}
   .verdict-icon{
     display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
     border:1px solid currentColor;background:rgba(255,255,255,.04);font-size:12px;font-weight:800;line-height:1;
@@ -384,7 +386,7 @@
     </div>
 
     <div class="hero-verdict"><span class="risk-pill" id="riskPill" data-i18n="tier.detecting">检测中</span><span class="verdict-icon" id="verdictIcon">·</span><span id="sumTitle">正在检测环境…</span></div>
-    <div class="hero-china">
+    <div class="hero-china" id="heroChina">
       <span id="heroChinaText" data-i18n="china.detecting">正在判断中国用户特征…</span>
       <span class="china-bar"><i id="chinaBar"></i></span>
       <span class="china-pct" id="chinaPct">--%</span>
@@ -1707,6 +1709,8 @@
   /* ---------- 渲染 ---------- */
   const CARD_JUMP = { TZ: 'TZ', OFF: 'TZ', RTC: 'RTC', V6: 'V6', DNS: 'DNS' };
   const CARD_NOTE = { IP: 1, LANG: 1, INTL: 1, FONT: 1, EMOJI: 1 };
+  /* 参与中国用户特征加权的卡片，检测到哪项就实时累加百分比 */
+  const CHINA_CODES = { TZ: 1, LANG: 1, FONT: 1, INTL: 1, IP: 1 };
 
   function cardHTML(c) {
     const title = cardText(c.title);
@@ -1757,12 +1761,17 @@
     return new Promise(function (resolve) {
       let i = 0;
       let acc = 0;
+      const seen = {};
       (function next() {
         if (i >= cards.length) { resolve(); return; }
         const c = cards[i++];
         wrap.insertAdjacentHTML('beforeend', cardHTML(c));
         acc += Math.round((c.sim || 0) * c.weight);
         setScoreLive(acc);
+        if (CHINA_CODES[c.code]) {
+          seen[c.code] = true;
+          renderChina(lastResult, seen);
+        }
         const badge = $('mascotBadge');
         if (badge) badge.textContent = i + '/' + cards.length;
         $('sumDesc').textContent = t('summary.syncing', { done: i, total: cards.length });
@@ -1795,31 +1804,45 @@
     if (pill) pill.textContent = t(state === 'detecting' ? 'tier.detecting' : 'tier.' + state + '.label');
   }
 
-  /* 中国用户特征占比：时区/语言/字体/Intl/出口地区加权 */
-  function computeChinaPct(result) {
+  /* 中国用户特征占比：时区/语言/字体/Intl/出口地区加权；seen 为空表示全部信号 */
+  function computeChinaPct(result, seen) {
     if (!result) return 0;
+    const has = function (k) { return !seen || !!seen[k]; };
     let pct = 0;
-    const tzName = String(result.tz || '').toLowerCase();
-    if (CN_TZ_NAMES.some(function (n) { return n.toLowerCase() === tzName; })) pct += 35;
-    else if (-new Date().getTimezoneOffset() === 480) pct += 15;
-    const primary = (result.langs || []).map(function (l) { return String(l).split('-')[0].toLowerCase(); });
-    if (primary.indexOf('zh') !== -1) pct += 25;
-    if (result.fonts && result.fonts.zh && result.fonts.zh.length) pct += 15;
-    if (/^zh/i.test(String(result.intl || ''))) pct += 10;
-    if (result.ip && String(result.ip.country || '').toUpperCase() === 'CN') pct += 25;
+    if (has('TZ')) {
+      const tzName = String(result.tz || '').toLowerCase();
+      if (CN_TZ_NAMES.some(function (n) { return n.toLowerCase() === tzName; })) pct += 35;
+      else if (-new Date().getTimezoneOffset() === 480) pct += 15;
+    }
+    if (has('LANG')) {
+      const primary = (result.langs || []).map(function (l) { return String(l).split('-')[0].toLowerCase(); });
+      if (primary.indexOf('zh') !== -1) pct += 25;
+    }
+    if (has('FONT') && result.fonts && result.fonts.zh && result.fonts.zh.length) pct += 15;
+    if (has('INTL') && /^zh/i.test(String(result.intl || ''))) pct += 10;
+    if (has('IP') && result.ip && String(result.ip.country || '').toUpperCase() === 'CN') pct += 25;
     return Math.max(0, Math.min(100, pct));
   }
 
-  function renderChina(result) {
+  /* seen 有值 = 检测进行中，百分比随信号累加；seen 为空 = 检测完成，隐藏进度条与百分比 */
+  function renderChina(result, seen) {
+    const box = $('heroChina');
     const text = $('heroChinaText');
     const pctEl = $('chinaPct');
     const bar = $('chinaBar');
     if (!text || !pctEl) return;
-    const pct = computeChinaPct(result);
+    const pct = computeChinaPct(result, seen);
     const level = pct >= 70 ? 'high' : pct >= 35 ? 'mid' : 'low';
+    if (seen) {
+      pctEl.textContent = pct + '%';
+      if (bar) bar.style.width = pct + '%';
+      if (box) box.classList.remove('is-done');
+      return;
+    }
     text.textContent = t('china.' + level);
     pctEl.textContent = pct + '%';
     if (bar) bar.style.width = pct + '%';
+    if (box) box.classList.add('is-done');
   }
 
   function animateScore(ring, target) {
@@ -1845,7 +1868,7 @@
     ring.style.setProperty('--ring-color', color);
     $('scoreUnit').textContent = t('score.unit');
     setHeroState(tier);
-    renderChina(result);
+    if (!isDetecting) renderChina(result);
     $('sumTitle').textContent = t('tier.' + tier + '.title');
     $('sumDesc').textContent = t('tier.' + tier + '.desc');
     animateScore(ring, score);
@@ -2597,6 +2620,7 @@ Read-Host '按回车退出' | Out-Null
 
   /* ---------- 报告 ---------- */
   let lastResult = null;
+  let isDetecting = false;
 
   function buildReport() {
     if (!lastResult) return '';
@@ -2646,8 +2670,10 @@ Read-Host '按回车退出' | Out-Null
     btn.textContent = t('btn.refreshing');
     $('cards').classList.add('loading');
     $('cards').innerHTML = '';
+    isDetecting = true;
     setScoreLive(0);
     $('ring').style.setProperty('--ring-color', 'var(--info)');
+    $('heroChina').classList.remove('is-done');
     $('chinaBar').style.width = '0';
     $('chinaPct').textContent = '--%';
     $('heroChinaText').textContent = t('china.detecting');
@@ -2658,6 +2684,7 @@ Read-Host '按回车退出' | Out-Null
       lastResult = await runChecks();
       const score = computeScore(lastResult.cards);
       await revealCards(lastResult.cards);
+      isDetecting = false;
       renderSummary(score, lastResult);
       renderAdvice(lastResult.cards);
       renderLeakPanel(lastResult.leaks);
@@ -2667,6 +2694,7 @@ Read-Host '按回车退出' | Out-Null
       $('sumTitle').textContent = t('summary.failed.title');
       $('sumDesc').textContent = t('summary.failed.desc', { msg: e.message });
     } finally {
+      isDetecting = false;
       $('cards').classList.remove('loading');
       btn.disabled = false;
       btn.textContent = t('btn.refresh');
