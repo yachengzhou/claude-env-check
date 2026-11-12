@@ -1,4 +1,4 @@
-# Claude 环境自检 · Claude Env Check
+# Claude 环境自检 · Claude Environment Check · ChatGPT Environment Check
 
 在浏览器里一次性检查你的 **IP、时区、浏览器语言、字体、WebRTC、IPv6、DNS、TUN 隧道** 是否互相矛盾，并给出可直接运行的修复脚本。
 
